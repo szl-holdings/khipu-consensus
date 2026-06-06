@@ -65,11 +65,11 @@ and (c) are over the **exact** `action_hash`. If the count reaches the
 unavailable witness (the classic `n ≥ 3f + 1` bound for a witness quorum).
 
 ```
-            ┌──────────┐   sign(action_hash, sentra-cosign)
-   action ─▶│  Sentra  │───────────────────────────────┐
+            ┌──────────┐   sign(action_hash, gate-cosign)   
+   action ─▶│ Witness1 │───────────────────────────────┐
       │     └──────────┘                                │
-      │     ┌──────────┐   sign(action_hash, amaru-cosign)
-      ├────▶│  Amaru   │───────────────────────────────┤
+      │     ┌──────────┐   sign(action_hash, memory-cosign) 
+      ├────▶│ Witness2 │───────────────────────────────┤
       │     └──────────┘                                ▼
       │     ┌──────────┐   sign(action_hash, a11oy-cosign)   ┌───────────────┐
       ├────▶│  a11oy   │──────────────────────────────────▶ │  tally(≥3/4)? │
@@ -86,11 +86,11 @@ Encoding (PAE)** of the canonical-JSON verdict statement. It is therefore
 verifiable by the [Sigstore Cosign](https://docs.sigstore.dev/cosign) CLI:
 
 ```bash
-cosign verify-blob --key sentra.pub --signature sig.b64 --insecure-ignore-tlog pae.bin
+cosign verify-blob --key gate-cosign.pub --signature sig.b64 --insecure-ignore-tlog pae.bin
 # Verified OK
 ```
 
-…and by plain OpenSSL (`openssl dgst -sha256 -verify sentra.pub -signature sig.bin pae.bin`).
+…and by plain OpenSSL (`openssl dgst -sha256 -verify gate-cosign.pub -signature sig.bin pae.bin`).
 
 ## Implementations
 
