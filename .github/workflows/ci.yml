@@ -6,22 +6,22 @@ jobs:
   python:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
         with: { python-version: "3.11" }
       - run: pip install cryptography
       - run: python python/tests/test_vectors.py
   go:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
+      - uses: actions/checkout@v6
+      - uses: actions/setup-go@v6
         with: { go-version: "1.22" }
       - run: cd go && go test ./...
   typescript:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
         with: { node-version: "20" }
       - run: cd typescript && npx --yes esbuild test/vectors.test.ts --bundle --platform=node --format=cjs --define:__dirname='"'"$PWD/test"'"' --outfile=/tmp/t.cjs && node /tmp/t.cjs
