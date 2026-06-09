@@ -131,7 +131,9 @@ predicates and the canonicity decision are fully proved.
 
 ## Honesty
 
-- TEST keys in `testdata/*.test.{key,pub}` are **TEST-ONLY**; never production.
+- Witness **public** keys live in `testdata/vectors.json` (and `testdata/*.test.pub`) and are **TEST-ONLY**.
+  Matching **private** keys are deliberately **not committed** (doctrine: never commit a private key); see
+  [`testdata/REGEN.md`](testdata/REGEN.md) to regenerate throwaway keys locally — the vector suite is verify-only and needs no private key.
 - This repo is the **protocol**, not the witnesses. Production witnesses run their
   own governance brains and publish their own per-witness public keys.
 - Sigstore Rekor transparency-log anchoring is supported via DSSE bundles; the
@@ -156,3 +158,4 @@ Apache-2.0 © 2026 Lutar, Stephen P. — SZL Holdings. ORCID 0009-0001-0110-4173
 Cite this work via [`CITATION.cff`](CITATION.cff). Math foundations: [szl-papers](https://github.com/szl-holdings/szl-papers) · [lutar-lean](https://github.com/szl-holdings/lutar-lean) (kernel `c7c0ba17`).
 
 <sub>Λ Conjecture 1 (not a theorem) · 749/14/163 v11 LOCKED (kernel `c7c0ba17`) · SLSA L1 honest · Section 889 = 5 vendors · [SZL Holdings](https://a11oy.net) · Apache-2.0 code · CC-BY-4.0 papers</sub>
+
