@@ -3,7 +3,7 @@
 
 # khipu-consensus
 
-### Turns a chain of AI governance checks into a tamper-proof group decision — at least 3 of 4 independent witnesses must cryptographically agree before any action is allowed.
+### Turns a chain of AI governance checks into a tamper-evident group decision — at least 3 of 4 independent witnesses must cryptographically agree before any action is allowed. Safety/liveness are Conjecture 2 / Conjecture 3 (proof-deferred, NOT proven).
 
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg?style=flat-square)](LICENSE) [![Build](https://github.com/szl-holdings/khipu-consensus/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/szl-holdings/khipu-consensus/actions/workflows/ci.yml) [![Doctrine v11](https://img.shields.io/badge/Doctrine-v11_LOCKED-3b82f6?style=flat-square)](https://github.com/szl-holdings/.github/tree/main/doctrine) [![SLSA](https://img.shields.io/badge/SLSA-L1_honest-22c55e?style=flat-square)](https://slsa.dev/spec/v1.0/levels)
 
