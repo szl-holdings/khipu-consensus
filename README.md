@@ -19,6 +19,12 @@ It removes the single point of failure in AI governance: no one component (and n
 
 _Internal / private repository — no public demo surface. See [docs.szlholdings.com](https://szl-holdings.github.io/docs-site) for the public product walkthrough._
 
+## Live demo
+
+Interactive BFT 3-of-4 witnessed-consensus demo (real in-browser SHA-256, honest
+quorum failure renders a broken lattice):
+https://huggingface.co/spaces/SZLHOLDINGS/khipu-consensus-live
+
 ## ⚡ Quick start (30 seconds)
 
 ```bash
