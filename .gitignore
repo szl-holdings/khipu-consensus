@@ -8,3 +8,5 @@ go/.gocache/
 # never commit private keys (doctrine) — TEST-ONLY private keys must stay local
 *.test.key
 *.pem
+
+*.egg-info/

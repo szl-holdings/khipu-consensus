@@ -7,6 +7,15 @@ authors = [{ name = "Yachay", email = "yachay@szlholdings.dev" }]
 requires-python = ">=3.9"
 dependencies = ["cryptography>=41.0"]
 
+[project.optional-dependencies]
+# Public witness API server (service/app.py) — the FastAPI surface.
+service = ["fastapi>=0.100", "uvicorn>=0.23", "pydantic>=2.0"]
+# Remote SDK transport (KhipuWitnessClient base_url=...).
+remote = ["requests>=2.28"]
+
+[project.scripts]
+khipu-verify = "khipu_consensus.cli:main"
+
 [build-system]
 requires = ["setuptools>=61"]
 build-backend = "setuptools.build_meta"
