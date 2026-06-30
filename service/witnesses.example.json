@@ -1,0 +1,35 @@
+{
+  "schema": "szl.khipu.witness-registry/v1",
+  "note": "TEST-ONLY public keys (mirrors testdata/vectors.json). No private keys here, by doctrine. Geo/org metadata is illustrative of distributed independent operators. A production registry points each endpoint at an independently-operated signer.",
+  "threshold": 3,
+  "witnesses": [
+    {
+      "organ": "sentra",
+      "public_key_pem": "-----BEGIN PUBLIC KEY-----\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEcdv0smwiVfr/o66zewZ8TuYGopT8\n2PN9LJfTK4pczgcQBP48ljJsOM4O/nWm4IH0HMblJeja3i5jsMRc77WhCw==\n-----END PUBLIC KEY-----\n",
+      "region": "us-east-1",
+      "org": "SZL Holdings (primary)",
+      "endpoint": ""
+    },
+    {
+      "organ": "amaru",
+      "public_key_pem": "-----BEGIN PUBLIC KEY-----\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE6yOytMc51nA3PoggrTgkviPd/w2a\nMoR6PT9p2f1b5BFP4VYLHnkIDKjZBvO8O1nex+tD9xJIK4mKFUWVfcLm+g==\n-----END PUBLIC KEY-----\n",
+      "region": "eu-west-1",
+      "org": "Amaru Independent Operator",
+      "endpoint": ""
+    },
+    {
+      "organ": "a11oy",
+      "public_key_pem": "-----BEGIN PUBLIC KEY-----\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEGuwlzbyVZbDPpjTcovhZwkwYB5wP\nVx+Yjkj0riZSejn5tiT5kJ4+poP95oXQIbqEGESxz8tvIar999ZbxcpqTA==\n-----END PUBLIC KEY-----\n",
+      "region": "us-west-2",
+      "org": "a11oy Command Center",
+      "endpoint": ""
+    },
+    {
+      "organ": "killinchu",
+      "public_key_pem": "-----BEGIN PUBLIC KEY-----\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEVC6ebOc+MduGpvEMYfNHVG/4CBWw\nQi6dUKqQ/GWuq/E5F3LOQNq8D1luZt4I+mFf5yOaWMXEuxMIiMod0TexrA==\n-----END PUBLIC KEY-----\n",
+      "region": "ap-southeast-1",
+      "org": "Killinchu Defense Surface",
+      "endpoint": ""
+    }
+  ]
+}
