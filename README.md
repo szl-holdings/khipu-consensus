@@ -23,7 +23,12 @@ _Internal / private repository — no public demo surface. See [docs.szlholdings
 
 Interactive BFT 3-of-4 witnessed-consensus demo (real in-browser SHA-256, honest
 quorum failure renders a broken lattice):
-https://huggingface.co/spaces/SZLHOLDINGS/khipu-consensus-live
+https://huggingface.co/spaces/SZLHOLDINGS/khipu-constellation
+
+> **HF name mapping (alignment fix 2026-06-30):** The HF Space for this repo is
+> [`SZLHOLDINGS/khipu-constellation`](https://huggingface.co/spaces/SZLHOLDINGS/khipu-constellation)
+> (the live 3D BFT mesh visualization). The previous link to `khipu-consensus-live` was
+> a non-existent Space — the correct entry is `khipu-constellation`.
 
 ## ⚡ Quick start (30 seconds)
 
@@ -165,3 +170,4 @@ Cite this work via [`CITATION.cff`](CITATION.cff). Math foundations: [szl-papers
 
 <sub>Λ Conjecture 1 (not a theorem) · 749/14/163 v11 LOCKED (kernel `c7c0ba17`) · SLSA L1 honest · Section 889 = 5 vendors · [SZL Holdings](https://a11oy.net) · Apache-2.0 code · CC-BY-4.0 papers</sub>
 
+*Signed-off-by: Stephen Lutar <stephenlutar2@gmail.com>*
