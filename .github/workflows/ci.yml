@@ -11,6 +11,12 @@ jobs:
         with: { python-version: "3.11" }
       - run: pip install cryptography
       - run: python python/tests/test_vectors.py
+      - name: Install szl-receipt (PCGI spine) + pytest
+        run: |
+          pip install pytest
+          pip install "git+https://github.com/szl-holdings/szl-receipt.git@v0.2.0"
+      - name: PCGI spine fold tests
+        run: cd python && python -m pytest tests/test_spine.py -q
   go:
     runs-on: ubuntu-latest
     steps:

@@ -12,6 +12,9 @@ dependencies = ["cryptography>=41.0"]
 service = ["fastapi>=0.100", "uvicorn>=0.23", "pydantic>=2.0"]
 # Remote SDK transport (KhipuWitnessClient base_url=...).
 remote = ["requests>=2.28"]
+# PCGI spine fold (khipu_consensus/spine.py) — a witnessed decision as ONE
+# canonical szl-receipt. Optional: the core BFT primitives never depend on it.
+spine = ["szl-receipt>=0.2.0"]
 
 [project.scripts]
 khipu-verify = "khipu_consensus.cli:main"
