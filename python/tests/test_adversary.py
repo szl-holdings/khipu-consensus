@@ -22,6 +22,7 @@ from khipu_consensus.adversary import (
     forged_signature_verdict,
     honest_allow_count,
     impersonation_verdict,
+    naive_perverdict_tally,
     replay_verdict,
     run_adversarial_suite,
     safety_holds,
@@ -164,32 +165,35 @@ def test_one_fault_still_reaches_canonical():
 # --- the honest finding: per-verdict vs distinct-witness counting -------------
 
 
-def test_duplicate_stuffing_exposes_gap_and_hardened_closes_it():
+def test_duplicate_stuffing_rejected_by_shipped_tally_naive_demonstrates_gap():
     keys, pubkeys = _keys()
     verdicts = duplicate_stuffing(_allow(keys, "sentra"), times=3)
-
-    # Reference tally over-counts one witness three times -> FALSE canonical.
-    core = tally(ACTION_A, verdicts, pubkeys, threshold=3, n=4)
-    assert core.decision == "canonical"
-    assert core.consensus_count == 3
 
     # Ground truth: only ONE distinct honest witness allowed.
     assert honest_allow_count(ACTION_A, verdicts, pubkeys) == 1
 
-    # The harness must catch the reference gap...
-    ok, detail = safety_holds(ACTION_A, verdicts, pubkeys, tally_fn=tally)
+    # The historical per-verdict demonstrator over-counts one witness 3x -> FALSE canonical.
+    naive = naive_perverdict_tally(ACTION_A, verdicts, pubkeys, threshold=3, n=4)
+    assert naive.decision == "canonical"
+    assert naive.consensus_count == 3
+    ok, detail = safety_holds(ACTION_A, verdicts, pubkeys, tally_fn=naive_perverdict_tally)
     assert ok is False
     assert "FALSE-CANONICAL" in detail
 
-    # ...and the hardened distinct-witness verifier must close it.
+    # The SHIPPED tally() now de-duplicates by witness -> rejected.
+    core = tally(ACTION_A, verdicts, pubkeys, threshold=3, n=4)
+    assert core.decision == "rejected"
+    assert core.consensus_count == 1
+    ok2, detail2 = safety_holds(ACTION_A, verdicts, pubkeys, tally_fn=tally)
+    assert ok2, detail2
+
+    # The explicit hardened verifier agrees.
     hard = distinct_witness_tally(ACTION_A, verdicts, pubkeys, threshold=3, n=4)
     assert hard.decision == "rejected"
     assert hard.consensus_count == 1
-    ok2, detail2 = safety_holds(ACTION_A, verdicts, pubkeys, tally_fn=distinct_witness_tally)
-    assert ok2, detail2
 
 
-def test_duplicate_stuffing_cannot_beat_hardened_even_with_extra_honest():
+def test_duplicate_stuffing_cannot_beat_shipped_tally_even_with_extra_honest():
     keys, pubkeys = _keys()
     # Two genuine distinct witnesses + one of them stuffed twice more.
     verdicts = [
@@ -198,27 +202,34 @@ def test_duplicate_stuffing_cannot_beat_hardened_even_with_extra_honest():
         dict(_allow(keys, "sentra")),
         dict(_allow(keys, "sentra")),
     ]
-    assert tally(ACTION_A, verdicts, pubkeys, threshold=3, n=4).decision == "canonical"
+    # Naive per-verdict counting is fooled...
+    assert naive_perverdict_tally(ACTION_A, verdicts, pubkeys, threshold=3, n=4).decision == "canonical"
+    # ...but the shipped tally() and the explicit hardened verifier both reject.
+    assert tally(ACTION_A, verdicts, pubkeys, threshold=3, n=4).decision == "rejected"
     assert distinct_witness_tally(ACTION_A, verdicts, pubkeys, threshold=3, n=4).decision == "rejected"
 
 
 # --- property / fuzz sweep ---------------------------------------------------
 
 
-def test_no_byzantine_strategy_forges_false_canonical_under_hardened():
+def test_no_byzantine_strategy_forges_false_canonical_under_shipped_tally():
     report = run_adversarial_suite(seed=1, fuzz_rounds=400)
     s = report["summary"]
+    assert s["core_all_safe"] is True
     assert s["hardened_all_safe"] is True
+    assert s["fuzz_core_safety_violations"] == 0
     assert s["fuzz_hardened_safety_violations"] == 0
-    # Every reference-tally violation in the sweep is a duplicate-stuffing case.
-    assert s["fuzz_core_violations_all_from_duplicate_stuffing"] is True
+    # Every violation the naive demonstrator suffers is a duplicate-stuffing case.
+    assert s["fuzz_naive_violations_all_from_duplicate_stuffing"] is True
 
 
-def test_reference_gap_is_reproduced_and_isolated_to_duplicate_stuffing():
+def test_historical_gap_reproduced_by_naive_and_isolated_to_duplicate_stuffing():
     report = run_adversarial_suite(seed=0, fuzz_rounds=200)
-    gaps = [sc for sc in report["scenarios"] if not sc["core_safe"]]
-    assert gaps, "expected the duplicate-stuffing gap to be reproduced"
+    gaps = [sc for sc in report["scenarios"] if not sc["naive_safe"]]
+    assert gaps, "expected the naive per-verdict demonstrator to reproduce the gap"
     assert all(sc["attack"] == DUPLICATE_STUFFING for sc in gaps)
+    # The shipped tally() and the explicit hardened verifier are safe everywhere.
+    assert all(sc["core_safe"] for sc in report["scenarios"])
     assert all(sc["hardened_safe"] for sc in report["scenarios"])
 
 
@@ -233,6 +244,7 @@ def test_report_defers_conjectures_and_frames_evidence_not_proof():
     assert honesty["safety"]["safety"]["status"] == "proof-deferred"
     assert honesty["safety"]["liveness"]["status"] == "proof-deferred"
     assert report["finding"]["id"] == "distinct-witness-counting"
+    assert report["finding"]["status"] == "fixed"
 
 
 if __name__ == "__main__":

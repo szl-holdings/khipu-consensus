@@ -27,7 +27,7 @@ to disk):
 | 4 | `PAYLOAD_TAMPER` | flip `verdict` / swap `action_hash`, keep the old signature | never counts (signature breaks) |
 | 5 | `REPLAY` | replay a genuine `allow` captured over another action | never counts |
 | 6 | `SILENCE` | a witness abstains / times out (`None`) | reduces available quorum |
-| 7 | `DUPLICATE_STUFFING` | resubmit one genuine witness's `allow` multiple times | **see finding below** |
+| 7 | `DUPLICATE_STUFFING` | resubmit one genuine witness's `allow` multiple times | never double-counts (distinct-witness rule — see finding) |
 
 ## The operational safety invariant
 
@@ -41,32 +41,40 @@ The ground truth is computed independently by `honest_allow_count(...)`, which
 reuses the real signature check but counts **each organ at most once** — the
 distinctness the Lean `validCount` model assumes.
 
-## Finding: per-verdict vs distinct-witness counting
+## Finding: per-verdict vs distinct-witness counting (FIXED)
 
-The reference `tally()` (and therefore `witness.verify_receipt()`, which
-re-tallies an **attacker-supplied** signature list) counts **per verdict**, not
-**per distinct witness**. Because a witness's signed verdict is public (it travels
-in receipts), an adversary who captures **one** genuine `allow` can resubmit it
-`threshold` times and drive an independent verifier to `canonical`:
+The reference `tally()` **used to** count **per verdict**, not **per distinct
+witness** (and `witness.verify_receipt()` and the CLI re-tally an
+**attacker-supplied** signature list, so they inherited it). Because a witness's
+signed verdict is public (it travels in receipts), an adversary who captured
+**one** genuine `allow` could resubmit it `threshold` times and drive an
+independent verifier to `canonical`.
+
+**Status: FIXED.** `tally()` now counts each witness at most once — a second
+valid `allow` from an already-counted organ is recorded (`counts=false`, reason
+`"duplicate-witness (already counted)"`) but does not increment the tally. The
+fix is mirrored across all three reference implementations (`python/`, `go/`,
+`typescript/`) and locked by a shared vector:
 
 ```python
 from khipu_consensus import tally, sign_verdict
 v = sign_verdict("sentra", action_hash, "allow", sentra_priv)
 tally(action_hash, [v, dict(v), dict(v)], {"sentra": sentra_pub}, threshold=3, n=4)
-# -> decision="canonical", 3-of-4   (from ONE witness)
+# -> decision="rejected", 1-of-4   (one witness counts once)
 ```
 
-- **Severity:** safety-relevant. The primary `witness.attest()` path is *not*
-  vulnerable (it iterates a registry one verdict per organ); the exposure is in
+- **Severity:** safety-relevant. The primary `witness.attest()` path was never
+  vulnerable (it iterates a registry one verdict per organ); the exposure was in
   the independent verifier path over an attacker-controlled verdict list.
-- **Mitigation (shipped, additive):** `adversary.distinct_witness_tally()` is a
-  drop-in verifier identical to `tally()` except it counts each organ at most
-  once. It closes the gap while leaving the reference `tally()` byte-for-byte
-  aligned with the Go and TypeScript vector suites.
-- **Recommended upstream fix (follow-up):** de-duplicate counting verdicts by
-  organ inside `tally()`; mirror the change in `go/` and `typescript/`; add a
-  duplicate-stuffing case to `testdata/vectors.json` so all three
-  implementations stay aligned.
+- **Regression guard:** `testdata/vectors.json` carries a `duplicate stuffing`
+  case (`decision: rejected`, `consensus_count: 2`) exercised by the Python, Go,
+  and TypeScript vector suites, so the three implementations stay aligned.
+- **Demonstrator:** `adversary.naive_perverdict_tally()` reproduces the old
+  per-verdict behaviour and is retained ONLY so the harness can keep exhibiting
+  the vulnerability class against a known-vulnerable baseline.
+- **Explicit hardened equivalent:** `adversary.distinct_witness_tally()` remains
+  as an independent distinct-witness verifier (now equivalent to the shipped
+  `tally()`).
 
 ## Running it
 
