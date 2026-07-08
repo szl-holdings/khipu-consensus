@@ -1,3 +1,5 @@
+> **SZL Holdings** · Doctrine v11 · Λ = Conjecture 1 (advisory, never "green"/theorem) · canonical [a-11-oy.com](https://a-11-oy.com)
+
 <!-- szl-investor-header -->
 <div align="center">
 
