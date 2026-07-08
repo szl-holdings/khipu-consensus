@@ -17,6 +17,8 @@ jobs:
           pip install "git+https://github.com/szl-holdings/szl-receipt.git@v0.2.0"
       - name: PCGI spine fold tests
         run: cd python && python -m pytest tests/test_spine.py -q
+      - name: Adversarial Byzantine fault-injection tests
+        run: cd python && python -m pytest tests/test_adversary.py -q
   go:
     runs-on: ubuntu-latest
     steps:
