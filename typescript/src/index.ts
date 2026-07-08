@@ -115,12 +115,19 @@ export function verifyVerdict(v: OrganVerdict, publicKeyPem: string, actionHash:
   }
 }
 
-/** Tally consensus. `verdicts` entries may be null (abstain/timeout). */
+/**
+ * Tally consensus. `verdicts` entries may be null (abstain/timeout).
+ * Each witness ("organ") counts at most once: a duplicate valid `allow` from an
+ * organ already counted is recorded (counts=false, reason "duplicate-witness
+ * (already counted)") but does not inflate consensusCount, so resubmitting one
+ * genuine verdict cannot forge a false quorum. Mirrors python/ and go/.
+ */
 export function tally(
   actionHash: string, verdicts: (OrganVerdict | null)[],
   pubkeys: Record<string, string>, threshold = 3, n = 4,
 ): ConsensusResult {
   const checks: OrganCheck[] = [];
+  const counted = new Set<string>();
   let count = 0;
   for (const v of verdicts) {
     if (v === null) {
@@ -133,8 +140,15 @@ export function tally(
       continue;
     }
     const chk = verifyVerdict(v, pem, actionHash);
+    if (chk.counts && counted.has(v.organ)) {
+      checks.push({ ...chk, counts: false, reason: "duplicate-witness (already counted)" });
+      continue;
+    }
+    if (chk.counts) {
+      counted.add(v.organ);
+      count++;
+    }
     checks.push(chk);
-    if (chk.counts) count++;
   }
   const decision = count >= threshold ? "canonical" : "rejected";
   return { actionHash, threshold, n, consensusCount: count, decision, khipuConsensus: `${count}-of-${n}`, checks };

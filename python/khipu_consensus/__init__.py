@@ -139,10 +139,19 @@ def tally(action_hash: str, verdicts: list, pubkeys: dict,
           threshold: int = 3, n: int = 4) -> ConsensusResult:
     """Count valid + allow signatures over `action_hash`; apply the BFT threshold.
 
+    Each witness ("organ") counts AT MOST ONCE: consensus is a property of
+    DISTINCT witnesses, not of raw verdict rows. A second valid `allow` from an
+    organ that already counted is recorded (``counts=False``, reason
+    "duplicate-witness (already counted)") but does NOT increment the tally, so
+    resubmitting one genuine verdict cannot inflate ``consensus_count`` past the
+    honest distinct-witness threshold. Mirrors typescript/ and go/ and the
+    distinctness the Lean ``validCount`` model assumes.
+
     verdicts: list of dict|OrganVerdict|None (None = abstain/timeout).
     pubkeys : {organ: PEM}.
     """
     checks = []
+    counted: set = set()
     count = 0
     for item in verdicts:
         if item is None:
@@ -154,8 +163,15 @@ def tally(action_hash: str, verdicts: list, pubkeys: dict,
             checks.append(OrganCheck(v.organ, v.keyid, False, None, False, False, "no public key"))
             continue
         chk = verify_verdict(v, pem, action_hash)
-        checks.append(chk)
+        if chk.counts and v.organ in counted:
+            checks.append(OrganCheck(
+                v.organ, v.keyid, chk.valid, chk.verdict, chk.action_hash_match,
+                False, "duplicate-witness (already counted)",
+            ))
+            continue
         if chk.counts:
+            counted.add(v.organ)
             count += 1
+        checks.append(chk)
     decision = "canonical" if count >= threshold else "rejected"
     return ConsensusResult(action_hash, threshold, n, count, decision, checks)

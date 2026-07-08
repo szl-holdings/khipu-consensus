@@ -41,14 +41,16 @@ The threat model (seven injected attacks):
   7. ``DUPLICATE_STUFFING`` — resubmit ONE genuine witness's ``allow`` verdict
      multiple times to inflate the count.
 
-Empirical finding surfaced by (7): the reference :func:`tally` (and therefore
-:func:`khipu_consensus.witness.verify_receipt`, which re-tallies an
-attacker-supplied signature list) counts **per verdict**, not **per distinct
-witness**. Duplicated genuine verdicts from a single witness inflate
-``consensus_count`` past the honest distinct-witness threshold. This module
-provides :func:`distinct_witness_tally` — an ADDITIVE hardened verifier that
-counts each organ at most once (the distinctness the Lean ``validCount`` model
-assumes) and closes the gap without touching the reference ``tally``.
+Empirical finding surfaced by (7): the reference :func:`tally` USED TO count
+**per verdict**, not **per distinct witness**, so duplicated genuine verdicts
+from a single witness inflated ``consensus_count`` past the honest
+distinct-witness threshold (:func:`khipu_consensus.witness.verify_receipt` and
+the CLI re-tally attacker-supplied lists, so they inherited it). This is now
+FIXED: :func:`tally` de-duplicates by witness in python/, go/, and typescript/,
+locked by a duplicate-stuffing case in ``testdata/vectors.json``.
+:func:`distinct_witness_tally` remains as an explicit hardened equivalent, and
+:func:`naive_perverdict_tally` is retained ONLY as a demonstrator so this suite
+can keep exhibiting the historical vulnerability class.
 """
 from __future__ import annotations
 
@@ -238,12 +240,12 @@ def distinct_witness_tally(
     action_hash: str, verdicts: list, pubkeys: dict,
     threshold: int = 3, n: int = 4,
 ):
-    """Hardened verifier: :func:`tally` but each organ counts at most once.
+    """Explicit hardened verifier: :func:`tally` but each organ counts at most once.
 
-    ADDITIVE mitigation for ``DUPLICATE_STUFFING`` — enforces the distinct-witness
-    rule the formal ``validCount`` assumes. Returns a
-    :class:`khipu_consensus.ConsensusResult`. The reference :func:`tally` is left
-    unchanged so the cross-language vector suite stays byte-for-byte aligned.
+    Enforces the distinct-witness rule the formal ``validCount`` assumes. As of the
+    distinct-witness fix the reference :func:`tally` ALSO de-duplicates by witness,
+    so this now agrees with it; it is kept as an independent, explicit reference and
+    for backward compatibility. Returns a :class:`khipu_consensus.ConsensusResult`.
     """
     from . import ConsensusResult
 
@@ -274,6 +276,38 @@ def distinct_witness_tally(
     return ConsensusResult(action_hash, threshold, n, count, decision, checks)
 
 
+def naive_perverdict_tally(
+    action_hash: str, verdicts: list, pubkeys: dict,
+    threshold: int = 3, n: int = 4,
+):
+    """HISTORICAL / INSECURE demonstrator: count per verdict, NO de-duplication.
+
+    Reproduces the behaviour :func:`tally` had BEFORE the distinct-witness fix.
+    Retained ONLY so the adversarial suite can keep exhibiting the
+    ``DUPLICATE_STUFFING`` vulnerability class against a known-vulnerable baseline.
+    NEVER use in production. Returns a :class:`khipu_consensus.ConsensusResult`.
+    """
+    from . import ConsensusResult
+
+    checks: list = []
+    count = 0
+    for item in verdicts:
+        if item is None:
+            checks.append(OrganCheck(None, None, False, None, False, False, "abstain/timeout"))
+            continue
+        v = item if isinstance(item, OrganVerdict) else OrganVerdict.from_dict(item)
+        pem = pubkeys.get(v.organ, "")
+        if not pem:
+            checks.append(OrganCheck(v.organ, v.keyid, False, None, False, False, "no public key"))
+            continue
+        chk = verify_verdict(v, pem, action_hash)
+        checks.append(chk)
+        if chk.counts:
+            count += 1
+    decision = "canonical" if count >= threshold else "rejected"
+    return ConsensusResult(action_hash, threshold, n, count, decision, checks)
+
+
 # --- scenario harness --------------------------------------------------------
 
 
@@ -287,8 +321,10 @@ class Scenario:
     honest_distinct_allow: int
     threshold: int
     n: int
-    tally_decision: str
+    naive_decision: str
+    core_decision: str
     hardened_decision: str
+    naive_safe: bool
     core_safe: bool
     hardened_safe: bool
     note: str = ""
@@ -320,10 +356,14 @@ ACTION_B = "b100000000000000000000000000000000000000000000000000000000000b01"
 
 
 def _scenario(name, attack, description, action_hash, verdicts, pubkeys, threshold, n):
+    naive = naive_perverdict_tally(action_hash, verdicts, pubkeys, threshold=threshold, n=n)
     core = tally(action_hash, verdicts, pubkeys, threshold=threshold, n=n)
     hard = distinct_witness_tally(action_hash, verdicts, pubkeys, threshold=threshold, n=n)
-    core_ok, core_detail = safety_holds(action_hash, verdicts, pubkeys, threshold, n, tally_fn=tally)
-    hard_ok, hard_detail = safety_holds(
+    naive_ok, naive_detail = safety_holds(
+        action_hash, verdicts, pubkeys, threshold, n, tally_fn=naive_perverdict_tally
+    )
+    core_ok, _core_detail = safety_holds(action_hash, verdicts, pubkeys, threshold, n, tally_fn=tally)
+    hard_ok, _hard_detail = safety_holds(
         action_hash, verdicts, pubkeys, threshold, n, tally_fn=distinct_witness_tally
     )
     return Scenario(
@@ -333,11 +373,13 @@ def _scenario(name, attack, description, action_hash, verdicts, pubkeys, thresho
         honest_distinct_allow=honest_allow_count(action_hash, verdicts, pubkeys),
         threshold=threshold,
         n=n,
-        tally_decision=core.decision,
+        naive_decision=naive.decision,
+        core_decision=core.decision,
         hardened_decision=hard.decision,
+        naive_safe=naive_ok,
         core_safe=core_ok,
         hardened_safe=hard_ok,
-        note="" if core_ok else core_detail,
+        note="" if naive_ok else naive_detail,
     )
 
 
@@ -431,14 +473,15 @@ def run_adversarial_suite(
     ))
     scenarios.append(_scenario(
         "duplicate-stuffing-single-witness", DUPLICATE_STUFFING,
-        "ONE genuine witness's allow resubmitted 3x -> reference tally over-counts; "
-        "distinct-witness tally rejects",
+        "ONE genuine witness's allow resubmitted 3x -> naive per-verdict counting "
+        "over-counts (false canonical); shipped distinct-witness tally rejects",
         ACTION_A, duplicate_stuffing(allow(organs[0]), times=3), pubkeys, threshold, n,
     ))
 
+    fuzz_naive_violations = 0
     fuzz_core_violations = 0
     fuzz_hardened_violations = 0
-    fuzz_core_violation_had_duplicate = 0
+    fuzz_naive_violation_had_duplicate = 0
     for _ in range(fuzz_rounds):
         verdicts: list = []
         used_genuine: dict = {}
@@ -474,18 +517,23 @@ def run_adversarial_suite(
             had_duplicate = True
 
         rng.shuffle(verdicts)
+        naive_ok, _ = safety_holds(
+            ACTION_A, verdicts, pubkeys, threshold, n, tally_fn=naive_perverdict_tally
+        )
         core_ok, _ = safety_holds(ACTION_A, verdicts, pubkeys, threshold, n, tally_fn=tally)
         hard_ok, _ = safety_holds(
             ACTION_A, verdicts, pubkeys, threshold, n, tally_fn=distinct_witness_tally
         )
+        if not naive_ok:
+            fuzz_naive_violations += 1
+            if had_duplicate:
+                fuzz_naive_violation_had_duplicate += 1
         if not core_ok:
             fuzz_core_violations += 1
-            if had_duplicate:
-                fuzz_core_violation_had_duplicate += 1
         if not hard_ok:
             fuzz_hardened_violations += 1
 
-    core_findings = [s.as_dict() for s in scenarios if not s.core_safe]
+    naive_findings = [s.as_dict() for s in scenarios if not s.naive_safe]
     return {
         "schema": ADVERSARIAL_SCHEMA,
         "kind": ADVERSARIAL_KIND,
@@ -500,37 +548,43 @@ def run_adversarial_suite(
         "scenarios": [s.as_dict() for s in scenarios],
         "summary": {
             "scenarios_total": len(scenarios),
-            "core_defended": sum(1 for s in scenarios if s.core_safe),
-            "core_gap_findings": len(core_findings),
+            "core_all_safe": all(s.core_safe for s in scenarios),
             "hardened_all_safe": all(s.hardened_safe for s in scenarios),
+            "naive_gap_findings": len(naive_findings),
             "fuzz_core_safety_violations": fuzz_core_violations,
-            "fuzz_core_violations_all_from_duplicate_stuffing": (
-                fuzz_core_violations == fuzz_core_violation_had_duplicate
-            ),
             "fuzz_hardened_safety_violations": fuzz_hardened_violations,
+            "fuzz_naive_safety_violations": fuzz_naive_violations,
+            "fuzz_naive_violations_all_from_duplicate_stuffing": (
+                fuzz_naive_violations == fuzz_naive_violation_had_duplicate
+            ),
         },
         "finding": {
             "id": "distinct-witness-counting",
             "severity": "safety-relevant",
+            "status": "fixed",
             "summary": (
-                "reference tally() (and verify_receipt(), which re-tallies an "
-                "attacker-supplied signature list) counts per-verdict, not per "
-                "distinct witness; duplicated genuine verdicts from a single "
-                "witness inflate consensus_count past the honest distinct-witness "
-                "threshold. distinct_witness_tally() closes it additively."
+                "reference tally() previously counted per-verdict, not per distinct "
+                "witness, so duplicated genuine verdicts from one witness could "
+                "inflate consensus_count past the honest distinct-witness threshold "
+                "(verify_receipt() and the CLI re-tally attacker-supplied lists, so "
+                "they inherited it). FIXED: tally() now de-duplicates by witness in "
+                "python/, go/, and typescript/, locked by a duplicate-stuffing case "
+                "in testdata/vectors.json. distinct_witness_tally() remains as an "
+                "explicit hardened equivalent."
             ),
-            "recommended_fix": (
-                "de-duplicate counting verdicts by organ inside tally() and mirror "
-                "in go/ and typescript/, then add a duplicate-stuffing case to "
-                "testdata/vectors.json so all three implementations stay aligned."
-            ),
-            "defended_by": "distinct_witness_tally",
+            "fixed_in": __version__,
+            "demonstrated_by": "naive_perverdict_tally",
+            "guarded_by": [
+                "tally",
+                "distinct_witness_tally",
+                "testdata/vectors.json:duplicate stuffing",
+            ],
         },
         "honesty": {
             "asserts": (
                 "EMPIRICAL adversarial evidence that no tested Byzantine strategy "
-                "forged a false-canonical against the distinct-witness rule; NOT a "
-                "proof of safety or liveness"
+                "forged a false-canonical against the shipped distinct-witness "
+                "tally(); NOT a proof of safety or liveness"
             ),
             "relation_to_formal": (
                 "complements the Lean 4 formal track (docs/FORMAL.md); it does NOT "
@@ -572,19 +626,21 @@ def _human_summary(report: dict) -> str:
         f"fuzz_rounds {report['params']['fuzz_rounds']}",
         "",
         f"  scenarios              : {s['scenarios_total']}",
-        f"  reference-tally safe   : {s['core_defended']}/{s['scenarios_total']}",
+        f"  shipped-tally safe     : {'ALL' if s['core_all_safe'] else 'NO'}",
         f"  distinct-witness safe  : {'ALL' if s['hardened_all_safe'] else 'NO'}",
-        f"  fuzz core violations   : {s['fuzz_core_safety_violations']} "
-        f"(all from duplicate-stuffing: {s['fuzz_core_violations_all_from_duplicate_stuffing']})",
+        f"  fuzz shipped violations: {s['fuzz_core_safety_violations']}",
         f"  fuzz hardened viol.    : {s['fuzz_hardened_safety_violations']}",
+        f"  fuzz naive violations  : {s['fuzz_naive_safety_violations']} "
+        f"(all from duplicate-stuffing: {s['fuzz_naive_violations_all_from_duplicate_stuffing']})",
         "",
         "  scenarios:",
     ]
     for sc in report["scenarios"]:
         flag = "ok " if sc["core_safe"] else "GAP"
         lines.append(
-            f"    [{flag}] {sc['name']:34} tally={sc['tally_decision']:9} "
-            f"hardened={sc['hardened_decision']:9} honest={sc['honest_distinct_allow']}"
+            f"    [{flag}] {sc['name']:34} naive={sc['naive_decision']:9} "
+            f"tally={sc['core_decision']:9} hardened={sc['hardened_decision']:9} "
+            f"honest={sc['honest_distinct_allow']}"
         )
     lines += [
         "",
@@ -611,7 +667,9 @@ def _main(argv=None) -> int:
         print(_human_summary(report))
 
     ok = (
-        report["summary"]["hardened_all_safe"]
+        report["summary"]["core_all_safe"]
+        and report["summary"]["hardened_all_safe"]
+        and report["summary"]["fuzz_core_safety_violations"] == 0
         and report["summary"]["fuzz_hardened_safety_violations"] == 0
     )
     return 0 if ok else 1

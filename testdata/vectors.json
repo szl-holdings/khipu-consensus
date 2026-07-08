@@ -228,6 +228,20 @@
           "reason": "ok"
         }
       ]
+    },
+    {
+      "name": "duplicate stuffing: one witness resubmitted (distinct-witness dedup -> rejected)",
+      "note": "sentra's single genuine allow is resubmitted 3x alongside one genuine amaru allow; per-verdict counting sees 4 allows (false canonical) while distinct-witness counting sees only sentra+amaru = 2 -> rejected. All three reference implementations must agree.",
+      "expect": {
+        "decision": "rejected",
+        "consensus_count": 2
+      },
+      "signatures": [
+        { "organ": "sentra", "keyid": "sentra-cosign", "payloadType": "application/vnd.szl.khipu.organ-verdict+json", "payload": "eyJhY3Rpb25faGFzaCI6ImM2Nzk0NTI3Nzc2M2QxMjY0MWJhNDY0OTM0OWU0MmYyMjFkNGJkNjM3MjY4NjIzZWJlOGE1MDBlZGFjMDIzMTIiLCJrZXlpZCI6InNlbnRyYS1jb3NpZ24iLCJsZWFuX3NoYSI6IjQ3ZDg2ODJmMjciLCJvcmdhbiI6InNlbnRyYSIsInJlYXNvbiI6Im9rIiwic2NoZW1hIjoic3psLmtoaXB1Lm9yZ2FuX3ZlcmRpY3QvdjEiLCJ0cyI6IjIwMjYtMDYtMDFUMDA6MDA6MDArMDA6MDAiLCJ2ZXJkaWN0IjoiYWxsb3cifQ==", "signature": "MEUCIGcXm34lBqMEZ9NwpaEtrFj/DC7atlrRAxHtyPxDhQLfAiEAngdLlGw44ozJeA180raqyr5Zy5jphbtmBS2F4QXcHWg=", "verdict": "allow", "reason": "ok" },
+        { "organ": "sentra", "keyid": "sentra-cosign", "payloadType": "application/vnd.szl.khipu.organ-verdict+json", "payload": "eyJhY3Rpb25faGFzaCI6ImM2Nzk0NTI3Nzc2M2QxMjY0MWJhNDY0OTM0OWU0MmYyMjFkNGJkNjM3MjY4NjIzZWJlOGE1MDBlZGFjMDIzMTIiLCJrZXlpZCI6InNlbnRyYS1jb3NpZ24iLCJsZWFuX3NoYSI6IjQ3ZDg2ODJmMjciLCJvcmdhbiI6InNlbnRyYSIsInJlYXNvbiI6Im9rIiwic2NoZW1hIjoic3psLmtoaXB1Lm9yZ2FuX3ZlcmRpY3QvdjEiLCJ0cyI6IjIwMjYtMDYtMDFUMDA6MDA6MDArMDA6MDAiLCJ2ZXJkaWN0IjoiYWxsb3cifQ==", "signature": "MEUCIGcXm34lBqMEZ9NwpaEtrFj/DC7atlrRAxHtyPxDhQLfAiEAngdLlGw44ozJeA180raqyr5Zy5jphbtmBS2F4QXcHWg=", "verdict": "allow", "reason": "ok" },
+        { "organ": "sentra", "keyid": "sentra-cosign", "payloadType": "application/vnd.szl.khipu.organ-verdict+json", "payload": "eyJhY3Rpb25faGFzaCI6ImM2Nzk0NTI3Nzc2M2QxMjY0MWJhNDY0OTM0OWU0MmYyMjFkNGJkNjM3MjY4NjIzZWJlOGE1MDBlZGFjMDIzMTIiLCJrZXlpZCI6InNlbnRyYS1jb3NpZ24iLCJsZWFuX3NoYSI6IjQ3ZDg2ODJmMjciLCJvcmdhbiI6InNlbnRyYSIsInJlYXNvbiI6Im9rIiwic2NoZW1hIjoic3psLmtoaXB1Lm9yZ2FuX3ZlcmRpY3QvdjEiLCJ0cyI6IjIwMjYtMDYtMDFUMDA6MDA6MDArMDA6MDAiLCJ2ZXJkaWN0IjoiYWxsb3cifQ==", "signature": "MEUCIGcXm34lBqMEZ9NwpaEtrFj/DC7atlrRAxHtyPxDhQLfAiEAngdLlGw44ozJeA180raqyr5Zy5jphbtmBS2F4QXcHWg=", "verdict": "allow", "reason": "ok" },
+        { "organ": "amaru", "keyid": "amaru-cosign", "payloadType": "application/vnd.szl.khipu.organ-verdict+json", "payload": "eyJhY3Rpb25faGFzaCI6ImM2Nzk0NTI3Nzc2M2QxMjY0MWJhNDY0OTM0OWU0MmYyMjFkNGJkNjM3MjY4NjIzZWJlOGE1MDBlZGFjMDIzMTIiLCJrZXlpZCI6ImFtYXJ1LWNvc2lnbiIsImxlYW5fc2hhIjoiNDdkODY4MmYyNyIsIm9yZ2FuIjoiYW1hcnUiLCJyZWFzb24iOiJvayIsInNjaGVtYSI6InN6bC5raGlwdS5vcmdhbl92ZXJkaWN0L3YxIiwidHMiOiIyMDI2LTA2LTAxVDAwOjAwOjAwKzAwOjAwIiwidmVyZGljdCI6ImFsbG93In0=", "signature": "MEUCID4VUm1k5MgVAjkCFx6NIHu8XDGwdkPvzuT0K9RRGSpXAiEAylxJEGq4dAGUYrVfL+Oh3qZIFD5LgAu4tKq6o2gkyxI=", "verdict": "allow", "reason": "ok" }
+      ]
     }
   ]
 }

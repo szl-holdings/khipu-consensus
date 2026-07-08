@@ -195,9 +195,12 @@ func VerifyVerdict(v OrganVerdict, publicKeyPem, actionHash string) OrganCheck {
 }
 
 // Tally counts valid+allow signatures over actionHash and applies the BFT threshold.
-// A nil entry in verdicts models an abstaining/timed-out witness.
+// Each witness ("organ") counts at most once: a duplicate valid allow from an
+// organ already counted is recorded but does not inflate the tally. A nil entry
+// in verdicts models an abstaining/timed-out witness. Mirrors python/ + typescript/.
 func Tally(actionHash string, verdicts []*OrganVerdict, pubkeys map[string]string, threshold, n int) ConsensusResult {
 	checks := make([]OrganCheck, 0, len(verdicts))
+	counted := make(map[string]bool)
 	count := 0
 	for _, v := range verdicts {
 		if v == nil {
@@ -210,10 +213,19 @@ func Tally(actionHash string, verdicts []*OrganVerdict, pubkeys map[string]strin
 			continue
 		}
 		chk := VerifyVerdict(*v, pem, actionHash)
-		checks = append(checks, chk)
+		// Each witness counts at most once: a duplicate valid allow from an
+		// already-counted organ is recorded but does not inflate the tally.
+		if chk.Counts && counted[v.Organ] {
+			chk.Counts = false
+			chk.Reason = "duplicate-witness (already counted)"
+			checks = append(checks, chk)
+			continue
+		}
 		if chk.Counts {
+			counted[v.Organ] = true
 			count++
 		}
+		checks = append(checks, chk)
 	}
 	decision := "rejected"
 	if count >= threshold {
