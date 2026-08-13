@@ -57,10 +57,18 @@ witness `endpoint` is pointed at an independently-operated signer.
 
 ```
 POST /v1/attest    {action_hash, verdicts?, reason?, lean_sha?}  -> MultiWitnessReceipt
-POST /v1/verify    {receipt, pubkeys?}                            -> independent re-verify
+POST /v1/verify    {receipt, pubkeys?}                            -> operator-rooted re-verify
 GET  /v1/witnesses                                                -> public witness registry
 GET  /v1/healthz                                                  -> liveness + honest status
 ```
+
+Verification is fail-closed against the registry loaded from `KHIPU_WITNESSES`.
+Receipt-embedded keys, threshold, and witness count are non-authoritative claims and
+must exactly match that operator-owned registry. The legacy `pubkeys` request field is
+accepted only when it exactly matches the same registry; it cannot replace trust roots.
+Library callers must pass `registry=trusted_registry`, or explicit trusted `pubkeys` and
+`threshold`. Every result includes SHA-256 identities for the exact canonical receipt
+and trust policy used during verification.
 
 Run it:
 

@@ -5,7 +5,7 @@
 Endpoints
 ---------
   POST /v1/attest    {action_hash, verdicts?, reason?, lean_sha?} -> MultiWitnessReceipt
-  POST /v1/verify    {receipt, pubkeys?}                           -> independent re-verify
+  POST /v1/verify    {receipt, pubkeys?}                           -> operator-rooted re-verify
   GET  /v1/witnesses                                               -> public witness registry
   GET  /v1/healthz                                                 -> liveness + honest status
 
@@ -74,7 +74,12 @@ def v1_attest(req: AttestRequest):
 
 @app.post("/v1/verify")
 def v1_verify(req: VerifyRequest):
-    return JSONResponse(verify_receipt(req.receipt, pubkeys=req.pubkeys or None))
+    if req.pubkeys and req.pubkeys != REGISTRY.pubkeys():
+        return JSONResponse(
+            {"detail": "pubkeys must exactly match the operator-owned witness registry"},
+            status_code=400,
+        )
+    return JSONResponse(verify_receipt(req.receipt, registry=REGISTRY))
 
 
 @app.get("/v1/witnesses")
