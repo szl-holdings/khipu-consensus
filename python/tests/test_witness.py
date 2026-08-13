@@ -6,6 +6,7 @@ a private key). Each test produces REAL ECDSA-P256-SHA256 signatures and re-veri
 through the BFT tally — no mocks, no fakes.
 """
 import hashlib
+import json
 
 import pytest
 from cryptography.hazmat.primitives.asymmetric import ec
@@ -14,6 +15,7 @@ from cryptography.hazmat.primitives import serialization
 from khipu_consensus import canonical_json
 from khipu_consensus.witness import Witness, WitnessRegistry, attest, verify_receipt
 from khipu_consensus.sdk import KhipuWitnessClient
+from khipu_consensus.cli import main as cli_main
 
 ACTION_HASH = "c67945277763d12641ba4649349e42f221d4bd637268623ebe8a500edac02312"
 ORGANS = ["sentra", "amaru", "a11oy", "killinchu"]
@@ -146,3 +148,39 @@ def test_sdk_in_process_roundtrip():
     rv = client.verify(receipt)
     assert rv["decision"] == "canonical"
     assert len(client.witnesses()) == 4
+
+
+def test_cli_uses_external_threshold_not_receipt_claim(tmp_path, capsys):
+    reg = _signing_registry(threshold=3)
+    receipt = attest(ACTION_HASH, reg).to_dict()
+    receipt_path = tmp_path / "receipt.json"
+    policy_path = tmp_path / "trust-policy.json"
+    receipt_path.write_text(json.dumps(receipt), encoding="utf-8")
+    policy_path.write_text(json.dumps({
+        "threshold": reg.threshold,
+        "witnesses": reg.public(),
+    }), encoding="utf-8")
+
+    assert cli_main([str(receipt_path), str(policy_path)]) == 0
+    accepted = json.loads(capsys.readouterr().out)
+    assert accepted["decision"] == "canonical"
+    assert accepted["trust_policy_matches"] is True
+
+    receipt["threshold"] = 1
+    receipt["decision"] = "canonical"
+    receipt_path.write_text(json.dumps(receipt), encoding="utf-8")
+    assert cli_main([str(receipt_path), str(policy_path)]) == 1
+    rejected = json.loads(capsys.readouterr().out)
+    assert rejected["decision"] == "rejected"
+    assert rejected["threshold"] == 3
+    assert rejected["trust_policy_matches"] is False
+
+
+def test_cli_rejects_missing_or_malformed_external_policy(tmp_path, capsys):
+    receipt_path = tmp_path / "receipt.json"
+    policy_path = tmp_path / "trust-policy.json"
+    receipt_path.write_text("{}", encoding="utf-8")
+    policy_path.write_text('{"threshold": 0, "witnesses": []}', encoding="utf-8")
+
+    assert cli_main([str(receipt_path), str(policy_path)]) == 2
+    assert "trusted pubkeys must be a non-empty" in capsys.readouterr().err

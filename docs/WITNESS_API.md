@@ -70,6 +70,16 @@ Library callers must pass `registry=trusted_registry`, or explicit trusted `pubk
 `threshold`. Every result includes SHA-256 identities for the exact canonical receipt
 and trust policy used during verification.
 
+The CLI uses the same boundary:
+
+```bash
+khipu-verify receipt.json service/witnesses.example.json
+```
+
+The second argument is an operator-owned registry containing `threshold` and
+`witnesses`. A public-key directory or receipt-embedded threshold is not accepted as a
+trust policy.
+
 Run it:
 
 ```bash

@@ -19,6 +19,8 @@ jobs:
         run: cd python && python -m pytest tests/test_spine.py -q
       - name: Adversarial Byzantine fault-injection tests
         run: cd python && python -m pytest tests/test_adversary.py -q
+      - name: Operator-rooted witness and CLI verification tests
+        run: cd python && python -m pytest tests/test_witness.py -q
   go:
     runs-on: ubuntu-latest
     steps:
