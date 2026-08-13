@@ -28,6 +28,7 @@ A receipt with no private key available is emitted UNSIGNED-honest, never faked.
 from __future__ import annotations
 
 import base64
+import hashlib
 import json
 from dataclasses import dataclass, field, asdict
 from typing import Optional
@@ -225,32 +226,122 @@ def attest(action_hash: str, registry: WitnessRegistry,
     )
 
 
-def verify_receipt(receipt: dict, pubkeys: Optional[dict] = None) -> dict:
+def _canonical_sha256(value: dict) -> str:
+    """SHA-256 identity for an exact canonical JSON value."""
+    return hashlib.sha256(canonical_json(value)).hexdigest()
+
+
+def _resolve_trust_policy(pubkeys: Optional[dict], threshold: Optional[int],
+                          registry: Optional[WitnessRegistry]) -> tuple:
+    """Resolve only caller/operator-owned trust policy, never receipt claims."""
+    if registry is not None:
+        if pubkeys is not None or threshold is not None:
+            raise ValueError("provide either registry or trusted pubkeys+threshold, not both")
+        pubkeys = registry.pubkeys()
+        threshold = registry.threshold
+
+    if pubkeys is None or threshold is None:
+        raise ValueError(
+            "trusted witness registry or explicit trusted pubkeys+threshold is required"
+        )
+    if not isinstance(pubkeys, dict) or not pubkeys:
+        raise ValueError("trusted pubkeys must be a non-empty organ-to-PEM mapping")
+    if type(threshold) is not int:
+        raise ValueError("trusted threshold must be an integer")
+
+    trusted_pubkeys = dict(pubkeys)
+    for organ, pem in trusted_pubkeys.items():
+        if not isinstance(organ, str) or not organ:
+            raise ValueError("trusted pubkey organ names must be non-empty strings")
+        if not isinstance(pem, str) or not pem.strip():
+            raise ValueError(f"trusted public key for {organ!r} must be non-empty PEM")
+
+    trusted_n = len(trusted_pubkeys)
+    if threshold < 1 or threshold > trusted_n:
+        raise ValueError("trusted threshold must be between 1 and the trusted witness count")
+    return trusted_pubkeys, threshold, trusted_n
+
+
+def _embedded_pubkeys(receipt: dict) -> tuple:
+    """Extract untrusted embedded key claims and flag malformed/duplicate entries."""
+    witnesses = receipt.get("witnesses")
+    if not isinstance(witnesses, list):
+        return {}, False
+
+    embedded = {}
+    for witness in witnesses:
+        if not isinstance(witness, dict):
+            return {}, False
+        organ = witness.get("organ")
+        pem = witness.get("public_key_pem")
+        if (not isinstance(organ, str) or not organ or organ in embedded
+                or not isinstance(pem, str) or not pem.strip()):
+            return {}, False
+        embedded[organ] = pem
+    return embedded, True
+
+
+def verify_receipt(receipt: dict, pubkeys: Optional[dict] = None, *,
+                   threshold: Optional[int] = None,
+                   registry: Optional[WitnessRegistry] = None) -> dict:
     """Independently re-verify a MultiWitnessReceipt.
 
-    Recomputes the BFT tally from the receipt's own signatures against the supplied
-    public keys (or the public keys embedded in the receipt's witness metadata). Returns
-    a fresh verification verdict — does NOT trust the receipt's own `decision` field.
+    Recomputes the BFT tally against repository/operator-owned trust roots and threshold.
+    Embedded keys, threshold, and witness count are non-authoritative claims that must
+    exactly match that external policy. The result binds the exact canonical receipt and
+    trust policy by SHA-256 and never trusts the receipt's own decision field.
     """
+    trusted_pubkeys, trusted_threshold, trusted_n = _resolve_trust_policy(
+        pubkeys, threshold, registry,
+    )
     action_hash = receipt.get("action_hash")
-    sigs = receipt.get("signatures") or []
-    threshold = int(receipt.get("threshold", 3))
-    n = int(receipt.get("n", len(sigs)))
+    sigs = receipt.get("signatures")
+    if not isinstance(sigs, list):
+        sigs = []
 
-    if pubkeys is None:
-        pubkeys = {}
-        for w in receipt.get("witnesses", []):
-            if w.get("public_key_pem"):
-                pubkeys[w["organ"]] = w["public_key_pem"]
+    embedded_pubkeys, embedded_keys_well_formed = _embedded_pubkeys(receipt)
+    trust_policy_matches = (
+        embedded_keys_well_formed
+        and embedded_pubkeys == trusted_pubkeys
+        and receipt.get("threshold") == trusted_threshold
+        and receipt.get("n") == trusted_n
+    )
+    schema_matches = receipt.get("schema") == RECEIPT_SCHEMA
 
-    result = tally(action_hash, sigs, pubkeys, threshold=threshold, n=n)
+    result = tally(
+        action_hash, sigs, trusted_pubkeys,
+        threshold=trusted_threshold, n=trusted_n,
+    )
+    decision = result.decision if schema_matches and trust_policy_matches else "rejected"
+    receipt_identity = {
+        "schema": receipt.get("schema"),
+        "action_hash": action_hash,
+        "sha256": _canonical_sha256(receipt),
+    }
+    trust_policy_identity = {
+        "threshold": trusted_threshold,
+        "n": trusted_n,
+        "sha256": _canonical_sha256({
+            "threshold": trusted_threshold,
+            "n": trusted_n,
+            "pubkeys": trusted_pubkeys,
+        }),
+    }
     return {
         "action_hash": action_hash,
-        "decision": result.decision,
+        "decision": decision,
         "consensus_count": result.consensus_count,
         "khipu_consensus": result.khipu_consensus,
         "threshold": result.threshold,
         "n": result.n,
         "checks": _checks_to_public(result),
-        "matches_claimed_decision": result.decision == receipt.get("decision"),
+        "schema_matches": schema_matches,
+        "trust_policy_matches": trust_policy_matches,
+        "receipt_identity": receipt_identity,
+        "trust_policy_identity": trust_policy_identity,
+        "matches_claimed_decision": (
+            schema_matches
+            and trust_policy_matches
+            and decision == receipt.get("decision")
+        ),
     }

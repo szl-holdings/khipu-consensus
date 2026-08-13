@@ -5,9 +5,13 @@ Keys are generated in-memory per test and never written to disk (doctrine: never
 a private key). Each test produces REAL ECDSA-P256-SHA256 signatures and re-verifies them
 through the BFT tally — no mocks, no fakes.
 """
+import hashlib
+
+import pytest
 from cryptography.hazmat.primitives.asymmetric import ec
 from cryptography.hazmat.primitives import serialization
 
+from khipu_consensus import canonical_json
 from khipu_consensus.witness import Witness, WitnessRegistry, attest, verify_receipt
 from khipu_consensus.sdk import KhipuWitnessClient
 
@@ -44,10 +48,15 @@ def test_4_of_4_canonical_and_reverifies():
     assert receipt.decision == "canonical"
     assert receipt.consensus_count == 4
     assert receipt.khipu_consensus == "4-of-4"
-    # independent re-verification from the receipt's own signatures + embedded pubkeys
-    rv = verify_receipt(receipt.to_dict())
+    # Independent re-verification uses the operator registry, never embedded trust claims.
+    receipt_dict = receipt.to_dict()
+    rv = verify_receipt(receipt_dict, registry=reg)
     assert rv["decision"] == "canonical"
+    assert rv["trust_policy_matches"] is True
     assert rv["matches_claimed_decision"] is True
+    assert rv["receipt_identity"]["sha256"] == hashlib.sha256(
+        canonical_json(receipt_dict)
+    ).hexdigest()
 
 
 def test_3_of_4_one_block_still_canonical():
@@ -82,10 +91,51 @@ def test_tamper_forged_sig_excluded():
     for s in d["signatures"]:
         if s and s["organ"] == "sentra":
             s["signature"] = "AAAA" + s["signature"][4:]
-    rv = verify_receipt(d)
+    rv = verify_receipt(d, registry=reg)
     sentra = next(c for c in rv["checks"] if c["organ"] == "sentra")
     assert sentra["counts"] is False
     assert rv["consensus_count"] == 3  # the other 3 still verify
+
+
+def test_verify_requires_external_trust_policy():
+    reg = _signing_registry()
+    receipt = attest(ACTION_HASH, reg).to_dict()
+    with pytest.raises(ValueError, match="trusted witness registry"):
+        verify_receipt(receipt)
+
+
+def test_embedded_key_substitution_cannot_define_trust_roots():
+    trusted_registry = _signing_registry()
+    attacker_registry = _signing_registry()
+    attacker_receipt = attest(ACTION_HASH, attacker_registry).to_dict()
+
+    assert attacker_receipt["decision"] == "canonical"
+    rv = verify_receipt(attacker_receipt, registry=trusted_registry)
+
+    assert rv["decision"] == "rejected"
+    assert rv["consensus_count"] == 0
+    assert rv["trust_policy_matches"] is False
+    assert rv["matches_claimed_decision"] is False
+
+
+def test_embedded_threshold_weakening_cannot_define_quorum():
+    reg = _signing_registry(threshold=3)
+    receipt = attest(
+        ACTION_HASH, reg,
+        verdicts={"killinchu": "block", "a11oy": "block"},
+    ).to_dict()
+    assert receipt["consensus_count"] == 2
+    assert receipt["decision"] == "rejected"
+
+    receipt["threshold"] = 1
+    receipt["decision"] = "canonical"
+    rv = verify_receipt(receipt, registry=reg)
+
+    assert rv["threshold"] == 3
+    assert rv["consensus_count"] == 2
+    assert rv["decision"] == "rejected"
+    assert rv["trust_policy_matches"] is False
+    assert rv["matches_claimed_decision"] is False
 
 
 def test_sdk_in_process_roundtrip():
