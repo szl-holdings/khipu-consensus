@@ -60,7 +60,9 @@ class KhipuWitnessClient:
     def verify(self, receipt: dict, pubkeys: Optional[dict] = None) -> dict:
         if self.base_url:
             return self._post("/verify", {"receipt": receipt, "pubkeys": pubkeys or {}})
-        return verify_receipt(receipt, pubkeys=pubkeys)
+        if pubkeys and pubkeys != self.registry.pubkeys():
+            raise ValueError("pubkeys must exactly match the configured operator registry")
+        return verify_receipt(receipt, registry=self.registry)
 
     def witnesses(self) -> list:
         if self.base_url:
