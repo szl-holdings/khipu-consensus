@@ -6,6 +6,7 @@ from pathlib import Path
 
 import pytest
 from fastapi import HTTPException
+from fastapi.testclient import TestClient
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[2]
 if str(REPOSITORY_ROOT) not in sys.path:
@@ -47,3 +48,42 @@ def test_example_registry_requires_explicit_operator_selection(monkeypatch):
     assert registry is not None
     assert registry.n == 4
     assert registry.threshold == 3
+
+
+@pytest.mark.parametrize(
+    "receipt",
+    [
+        {"schema": "\ud800"},
+        {"nested": {"evidence": ["valid", "\udfff"]}},
+    ],
+)
+def test_verify_rejects_non_utf8_receipt_text(monkeypatch, receipt):
+    example = Path(service_app.__file__).with_name("witnesses.example.json")
+    monkeypatch.setattr(service_app, "REGISTRY", service_app.WitnessRegistry.from_dict(
+        json.loads(example.read_text(encoding="utf-8"))
+    ))
+
+    response = service_app.v1_verify(service_app.VerifyRequest(receipt=receipt))
+
+    assert response.status_code == 400
+    assert json.loads(response.body) == {
+        "detail": "receipt contains text that is not valid UTF-8",
+    }
+
+
+def test_verify_route_rejects_escaped_lone_surrogate(monkeypatch):
+    example = Path(service_app.__file__).with_name("witnesses.example.json")
+    monkeypatch.setattr(service_app, "REGISTRY", service_app.WitnessRegistry.from_dict(
+        json.loads(example.read_text(encoding="utf-8"))
+    ))
+
+    response = TestClient(service_app.app).post(
+        "/v1/verify",
+        content=r'{"receipt":{"evidence":"\ud800"}}',
+        headers={"content-type": "application/json"},
+    )
+
+    assert response.status_code == 400
+    assert response.json() == {
+        "detail": "receipt contains text that is not valid UTF-8",
+    }

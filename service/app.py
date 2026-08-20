@@ -93,7 +93,18 @@ def v1_verify(req: VerifyRequest):
             {"detail": "pubkeys must exactly match the operator-owned witness registry"},
             status_code=400,
         )
-    return JSONResponse(verify_receipt(req.receipt, registry=registry))
+    try:
+        result = verify_receipt(req.receipt, registry=registry)
+    except UnicodeEncodeError:
+        # Python's JSON parser accepts escaped lone surrogates, but they are not
+        # valid UTF-8 and therefore cannot have the canonical receipt identity
+        # required by this endpoint. Reject them as malformed client input
+        # instead of letting canonical hashing escape as a server error.
+        return JSONResponse(
+            {"detail": "receipt contains text that is not valid UTF-8"},
+            status_code=400,
+        )
+    return JSONResponse(result)
 
 
 @app.get("/v1/witnesses")
