@@ -27,7 +27,15 @@ def main(argv=None):
             receipt,
             registry=WitnessRegistry.from_dict(policy),
         )
-    except (OSError, UnicodeError, json.JSONDecodeError, TypeError, ValueError) as exc:
+    except (
+        OSError,
+        UnicodeError,
+        json.JSONDecodeError,
+        TypeError,
+        ValueError,
+        KeyError,
+        AttributeError,
+    ) as exc:
         print(f"verification input rejected: {exc}", file=sys.stderr)
         return 2
 

@@ -246,3 +246,12 @@ def test_cli_rejects_missing_or_malformed_external_policy(tmp_path, capsys):
 
     assert cli_main([str(receipt_path), str(policy_path)]) == 2
     assert "trusted pubkeys must be a non-empty" in capsys.readouterr().err
+
+    for malformed_row in ({}, 1):
+        policy_path.write_text(json.dumps({
+            "threshold": 1,
+            "witnesses": [malformed_row],
+        }), encoding="utf-8")
+
+        assert cli_main([str(receipt_path), str(policy_path)]) == 2
+        assert "verification input rejected:" in capsys.readouterr().err
