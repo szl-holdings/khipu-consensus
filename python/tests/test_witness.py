@@ -263,3 +263,11 @@ def test_cli_rejects_missing_or_malformed_external_policy(tmp_path, capsys):
     }), encoding="utf-8")
     assert cli_main([str(receipt_path), str(policy_path)]) == 2
     assert "duplicate witness organs" in capsys.readouterr().err
+
+    for malformed_threshold in (True, 2.9):
+        policy_path.write_text(json.dumps({
+            "threshold": malformed_threshold,
+            "witnesses": [duplicate],
+        }), encoding="utf-8")
+        assert cli_main([str(receipt_path), str(policy_path)]) == 2
+        assert "threshold must be an integer" in capsys.readouterr().err

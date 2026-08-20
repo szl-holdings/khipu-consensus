@@ -23,6 +23,9 @@ def main(argv=None):
             policy = json.load(policy_file)
         if not isinstance(receipt, dict) or not isinstance(policy, dict):
             raise TypeError("receipt and trust policy must be JSON objects")
+        threshold = policy.get("threshold", 3)
+        if type(threshold) is not int:
+            raise TypeError("trust policy threshold must be an integer")
         witnesses = policy.get("witnesses", [])
         if not isinstance(witnesses, list) or not all(
             isinstance(witness, dict) for witness in witnesses
