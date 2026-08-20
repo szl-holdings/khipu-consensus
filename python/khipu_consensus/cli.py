@@ -23,6 +23,14 @@ def main(argv=None):
             policy = json.load(policy_file)
         if not isinstance(receipt, dict) or not isinstance(policy, dict):
             raise TypeError("receipt and trust policy must be JSON objects")
+        witnesses = policy.get("witnesses", [])
+        if not isinstance(witnesses, list) or not all(
+            isinstance(witness, dict) for witness in witnesses
+        ):
+            raise TypeError("trust policy witnesses must be a list of objects")
+        organs = [witness.get("organ") for witness in witnesses]
+        if len(organs) != len(set(organs)):
+            raise ValueError("trust policy contains duplicate witness organs")
         result = verify_receipt(
             receipt,
             registry=WitnessRegistry.from_dict(policy),

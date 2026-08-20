@@ -255,3 +255,11 @@ def test_cli_rejects_missing_or_malformed_external_policy(tmp_path, capsys):
 
         assert cli_main([str(receipt_path), str(policy_path)]) == 2
         assert "verification input rejected:" in capsys.readouterr().err
+
+    duplicate = _signing_registry(threshold=1).public()[0]
+    policy_path.write_text(json.dumps({
+        "threshold": 1,
+        "witnesses": [duplicate, duplicate],
+    }), encoding="utf-8")
+    assert cli_main([str(receipt_path), str(policy_path)]) == 2
+    assert "duplicate witness organs" in capsys.readouterr().err
