@@ -281,6 +281,51 @@ def _embedded_pubkeys(receipt: dict) -> tuple:
     return embedded, True
 
 
+def _validate_signature_entries(signatures, trusted_pubkeys: dict,
+                                trusted_n: int) -> tuple:
+    """Validate untrusted receipt rows before doing any cryptographic work.
+
+    A canonical receipt has at most one row for each trusted witness. ``None``
+    remains the explicit abstain/timeout value. Rejecting the entire collection
+    before ``tally`` keeps attacker-controlled row counts and malformed mapping
+    keys away from public-key lookup and ECDSA verification.
+    """
+    if not isinstance(signatures, list):
+        return False, "signatures must be a list"
+    if len(signatures) > trusted_n:
+        return False, "signature count exceeds the trusted witness count"
+
+    seen = set()
+    required_strings = ("organ", "keyid", "payloadType", "payload", "signature")
+    optional_strings = ("verdict", "reason")
+    for index, item in enumerate(signatures):
+        if item is None:
+            continue
+        if not isinstance(item, dict):
+            return False, f"signature entry {index} must be an object or null"
+        for field_name in required_strings:
+            value = item.get(field_name)
+            if not isinstance(value, str) or not value:
+                return False, (
+                    f"signature entry {index} field {field_name!r} "
+                    "must be a non-empty string"
+                )
+        for field_name in optional_strings:
+            if field_name in item and not isinstance(item[field_name], str):
+                return False, (
+                    f"signature entry {index} field {field_name!r} must be a string"
+                )
+
+        organ = item["organ"]
+        if organ not in trusted_pubkeys:
+            return False, f"signature entry {index} names an untrusted witness"
+        if organ in seen:
+            return False, f"signature entry {index} duplicates witness {organ!r}"
+        seen.add(organ)
+
+    return True, ""
+
+
 def verify_receipt(receipt: dict, pubkeys: Optional[dict] = None, *,
                    threshold: Optional[int] = None,
                    registry: Optional[WitnessRegistry] = None) -> dict:
@@ -296,8 +341,10 @@ def verify_receipt(receipt: dict, pubkeys: Optional[dict] = None, *,
     )
     action_hash = receipt.get("action_hash")
     sigs = receipt.get("signatures")
-    if not isinstance(sigs, list):
-        sigs = []
+    signatures_valid, signature_error = _validate_signature_entries(
+        sigs, trusted_pubkeys, trusted_n,
+    )
+    safe_sigs = sigs if signatures_valid else []
 
     embedded_pubkeys, embedded_keys_well_formed = _embedded_pubkeys(receipt)
     trust_policy_matches = (
@@ -309,10 +356,14 @@ def verify_receipt(receipt: dict, pubkeys: Optional[dict] = None, *,
     schema_matches = receipt.get("schema") == RECEIPT_SCHEMA
 
     result = tally(
-        action_hash, sigs, trusted_pubkeys,
+        action_hash, safe_sigs, trusted_pubkeys,
         threshold=trusted_threshold, n=trusted_n,
     )
-    decision = result.decision if schema_matches and trust_policy_matches else "rejected"
+    decision = (
+        result.decision
+        if schema_matches and trust_policy_matches and signatures_valid
+        else "rejected"
+    )
     receipt_identity = {
         "schema": receipt.get("schema"),
         "action_hash": action_hash,
@@ -337,11 +388,14 @@ def verify_receipt(receipt: dict, pubkeys: Optional[dict] = None, *,
         "checks": _checks_to_public(result),
         "schema_matches": schema_matches,
         "trust_policy_matches": trust_policy_matches,
+        "signatures_valid": signatures_valid,
+        "signature_error": signature_error,
         "receipt_identity": receipt_identity,
         "trust_policy_identity": trust_policy_identity,
         "matches_claimed_decision": (
             schema_matches
             and trust_policy_matches
+            and signatures_valid
             and decision == receipt.get("decision")
         ),
     }
