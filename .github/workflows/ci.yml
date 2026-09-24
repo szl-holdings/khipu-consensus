@@ -1,5 +1,5 @@
 name: khipu-consensus-ci
-on: [push, pull_request]
+on: {push: {branches-ignore: [dependabot/**], tags: ['**']}, pull_request: null, merge_group: {types: [checks_requested]}}
 permissions:
   contents: read
 jobs:
