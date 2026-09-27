@@ -49,7 +49,7 @@ In two sentences: this component is part of SZL's governed-AI mesh — it enforc
 
 # Khipu Consensus — BFT 3-of-4 multi-party signed agreement
 
-> The category SZL invents: **multi-party-witnessed AI.** Turn a chain of
+> The category SZL builds: **multi-party-witnessed AI.** Turn a chain of
 > governance "organs" into a **Byzantine-fault-tolerant multi-signature
 > agreement**. Each witness signs an action hash with its **own** ECDSA-P256 key.
 > **≥ 3 valid `allow` signatures over the same action ⇒ canonical.** 2-of-4 or
