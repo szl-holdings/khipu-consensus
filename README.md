@@ -54,6 +54,8 @@ In two sentences: this component is part of SZL's governed-AI mesh — it enforc
 > agreement**. Each witness signs an action hash with its **own** ECDSA-P256 key.
 > **≥ 3 valid `allow` signatures over the same action ⇒ canonical.** 2-of-4 or
 > fewer ⇒ **rejected**.
+>
+> This implementation demonstrates a 3-of-4 DSSE/ECDSA-P256 agreement protocol; it does not by itself establish third-party deployment, interoperability, or production qualification.
 
 [![License: Apache-2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
 
