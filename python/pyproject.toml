@@ -6,6 +6,7 @@ license = { text = "Apache-2.0" }
 authors = [{ name = "Yachay", email = "yachay@szlholdings.dev" }]
 requires-python = ">=3.9"
 dependencies = ["cryptography>=41.0"]
+readme = "README.md"
 
 [project.optional-dependencies]
 # Public witness API server (service/app.py) — the FastAPI surface.
@@ -14,10 +15,16 @@ service = ["fastapi>=0.100", "uvicorn>=0.23", "pydantic>=2.0"]
 remote = ["requests>=2.28"]
 # PCGI spine fold (khipu_consensus/spine.py) — a witnessed decision as ONE
 # canonical szl-receipt. Optional: the core BFT primitives never depend on it.
-spine = ["szl-receipt>=0.2.0"]
+spine = ["szl-receipt-dsse>=0.3.1"]
 
 [project.scripts]
 khipu-verify = "khipu_consensus.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/szl-holdings/khipu-consensus"
+Source = "https://github.com/szl-holdings/khipu-consensus"
+Issues = "https://github.com/szl-holdings/khipu-consensus/issues"
+Changelog = "https://github.com/szl-holdings/khipu-consensus/releases"
 
 [build-system]
 requires = ["setuptools>=61"]
@@ -25,3 +32,7 @@ build-backend = "setuptools.build_meta"
 
 [tool.setuptools.packages.find]
 where = ["."]
+exclude = ["tests*"]
+
+[tool.szl.release]
+import_names = ["khipu_consensus"] # wheel top-level import names; the release gate fails if the built wheel differs
