@@ -1,0 +1,370 @@
+{
+  "fixture_note": "Disposable generated ECDSA-P256 test keys; public keys and signatures only. No production keys or network calls. Same bytes are verified by Python, TypeScript and Go.",
+  "action_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "threshold": 3,
+  "n": 3,
+  "pubkeys": {
+    "fixture-witness-0": "-----BEGIN PUBLIC KEY-----\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEkPKIBfBxpP4M9JCWQ6CVyVkoXD6X\nzQo8yFZ54IYvlNMq2veBk+n/uy0rNiBVG5/bYJe4O3lA/Cd/V8OI5XdIsg==\n-----END PUBLIC KEY-----\n",
+    "fixture-witness-1": "-----BEGIN PUBLIC KEY-----\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE7SHZ44wkGqXEeAs+mUg8PAJhf/7i\nysJl3mdivJjln3520Xv3pLvlAkhQmUBYeW1Y+lmPTN21RdAlHjohZs+r4A==\n-----END PUBLIC KEY-----\n",
+    "fixture-witness-2": "-----BEGIN PUBLIC KEY-----\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE8u1LUKJh8eoo8lYhRLwrWt6HOqYf\nmonsqQ1OYCAB4nBk0XRJRBpp4trtbu7JE14VETXTU0S+rDr7OtQqmsQHdw==\n-----END PUBLIC KEY-----\n"
+  },
+  "cases": [
+    {
+      "name": "valid-v1",
+      "signatures": [
+        {
+          "organ": "fixture-witness-0",
+          "keyid": "fixture-witness-0-cosign",
+          "payloadType": "application/vnd.szl.khipu.organ-verdict+json",
+          "payload": "eyJhY3Rpb25faGFzaCI6ImFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWEiLCJrZXlpZCI6ImZpeHR1cmUtd2l0bmVzcy0wLWNvc2lnbiIsImxlYW5fc2hhIjoiZml4dHVyZSIsIm9yZ2FuIjoiZml4dHVyZS13aXRuZXNzLTAiLCJyZWFzb24iOiJHZW5lcmF0ZWQgb2ZmbGluZSByZWdyZXNzaW9uIGZpeHR1cmUgb25seSIsInNjaGVtYSI6InN6bC5raGlwdS5vcmdhbl92ZXJkaWN0L3YxIiwidHMiOiIyMDI2LTEwLTA1VDAwOjAwOjAwKzAwOjAwIiwidmVyZGljdCI6ImFsbG93In0=",
+          "signature": "MEUCICFx7SzRkZPwKDFs9YJcaRHxZYKkI6fYb+VpOY4w8rmfAiEA75PZrqiRiEHT5obIDwVg4vyL+qjCe/a3ZHzcmk66JN4=",
+          "verdict": "allow",
+          "reason": "Generated offline regression fixture only"
+        },
+        {
+          "organ": "fixture-witness-1",
+          "keyid": "fixture-witness-1-cosign",
+          "payloadType": "application/vnd.szl.khipu.organ-verdict+json",
+          "payload": "eyJhY3Rpb25faGFzaCI6ImFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWEiLCJrZXlpZCI6ImZpeHR1cmUtd2l0bmVzcy0xLWNvc2lnbiIsImxlYW5fc2hhIjoiZml4dHVyZSIsIm9yZ2FuIjoiZml4dHVyZS13aXRuZXNzLTEiLCJyZWFzb24iOiJHZW5lcmF0ZWQgb2ZmbGluZSByZWdyZXNzaW9uIGZpeHR1cmUgb25seSIsInNjaGVtYSI6InN6bC5raGlwdS5vcmdhbl92ZXJkaWN0L3YxIiwidHMiOiIyMDI2LTEwLTA1VDAwOjAwOjAwKzAwOjAwIiwidmVyZGljdCI6ImFsbG93In0=",
+          "signature": "MEYCIQDxBGpBjdaH28gq2G9G2w2awIVTN5oJzAgw9CnTgQW7MgIhAIeFhUMsTY6NoQgs3seMvWXdceNwf4rTWSL6PwUwlSAJ",
+          "verdict": "allow",
+          "reason": "Generated offline regression fixture only"
+        },
+        {
+          "organ": "fixture-witness-2",
+          "keyid": "fixture-witness-2-cosign",
+          "payloadType": "application/vnd.szl.khipu.organ-verdict+json",
+          "payload": "eyJhY3Rpb25faGFzaCI6ImFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWEiLCJrZXlpZCI6ImZpeHR1cmUtd2l0bmVzcy0yLWNvc2lnbiIsImxlYW5fc2hhIjoiZml4dHVyZSIsIm9yZ2FuIjoiZml4dHVyZS13aXRuZXNzLTIiLCJyZWFzb24iOiJHZW5lcmF0ZWQgb2ZmbGluZSByZWdyZXNzaW9uIGZpeHR1cmUgb25seSIsInNjaGVtYSI6InN6bC5raGlwdS5vcmdhbl92ZXJkaWN0L3YxIiwidHMiOiIyMDI2LTEwLTA1VDAwOjAwOjAwKzAwOjAwIiwidmVyZGljdCI6ImFsbG93In0=",
+          "signature": "MEUCIQC5x0ABX907KHoxC9/74XHe9Ca4JN5Qd1jW/qA8r6vFAAIgCsb0iwfAP1n0Dnk19eFp7zLV6UT5vWFd+lMhs/v1sFg=",
+          "verdict": "allow",
+          "reason": "Generated offline regression fixture only"
+        }
+      ],
+      "expect": {
+        "decision": "canonical",
+        "consensus_count": 3
+      }
+    },
+    {
+      "name": "omitted-payload-type",
+      "signatures": [
+        {
+          "organ": "fixture-witness-0",
+          "keyid": "fixture-witness-0-cosign",
+          "payload": "eyJhY3Rpb25faGFzaCI6ImFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWEiLCJrZXlpZCI6ImZpeHR1cmUtd2l0bmVzcy0wLWNvc2lnbiIsImxlYW5fc2hhIjoiZml4dHVyZSIsIm9yZ2FuIjoiZml4dHVyZS13aXRuZXNzLTAiLCJyZWFzb24iOiJHZW5lcmF0ZWQgb2ZmbGluZSByZWdyZXNzaW9uIGZpeHR1cmUgb25seSIsInNjaGVtYSI6InN6bC5raGlwdS5vcmdhbl92ZXJkaWN0L3YxIiwidHMiOiIyMDI2LTEwLTA1VDAwOjAwOjAwKzAwOjAwIiwidmVyZGljdCI6ImFsbG93In0=",
+          "signature": "MEYCIQDiGTmmElWLPpj7TrBiIc4hctDpqicxlAKehFlqnBJ6rQIhAPLfd0unK7PBGDfc4sfRhtHOxl6PAOrkCilpZLbEonKs",
+          "verdict": "allow",
+          "reason": "Generated offline regression fixture only"
+        },
+        {
+          "organ": "fixture-witness-1",
+          "keyid": "fixture-witness-1-cosign",
+          "payload": "eyJhY3Rpb25faGFzaCI6ImFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWEiLCJrZXlpZCI6ImZpeHR1cmUtd2l0bmVzcy0xLWNvc2lnbiIsImxlYW5fc2hhIjoiZml4dHVyZSIsIm9yZ2FuIjoiZml4dHVyZS13aXRuZXNzLTEiLCJyZWFzb24iOiJHZW5lcmF0ZWQgb2ZmbGluZSByZWdyZXNzaW9uIGZpeHR1cmUgb25seSIsInNjaGVtYSI6InN6bC5raGlwdS5vcmdhbl92ZXJkaWN0L3YxIiwidHMiOiIyMDI2LTEwLTA1VDAwOjAwOjAwKzAwOjAwIiwidmVyZGljdCI6ImFsbG93In0=",
+          "signature": "MEQCIDO2DODnVQSsaTcYMu+duDA9qUZyLzVfEEQ2kyoc8Jt5AiAxePGqSbydoGCTZIZENz9bmi/jD7Xz2lxH2uq+4YDMIw==",
+          "verdict": "allow",
+          "reason": "Generated offline regression fixture only"
+        },
+        {
+          "organ": "fixture-witness-2",
+          "keyid": "fixture-witness-2-cosign",
+          "payload": "eyJhY3Rpb25faGFzaCI6ImFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWEiLCJrZXlpZCI6ImZpeHR1cmUtd2l0bmVzcy0yLWNvc2lnbiIsImxlYW5fc2hhIjoiZml4dHVyZSIsIm9yZ2FuIjoiZml4dHVyZS13aXRuZXNzLTIiLCJyZWFzb24iOiJHZW5lcmF0ZWQgb2ZmbGluZSByZWdyZXNzaW9uIGZpeHR1cmUgb25seSIsInNjaGVtYSI6InN6bC5raGlwdS5vcmdhbl92ZXJkaWN0L3YxIiwidHMiOiIyMDI2LTEwLTA1VDAwOjAwOjAwKzAwOjAwIiwidmVyZGljdCI6ImFsbG93In0=",
+          "signature": "MEUCIQC+Cmc1s4xawQcwPHV91bZPuSkOHH3Nk+EyOJ0NDyQawAIgEsPNsDFfJ/w8M3triGtFwOAdY9KB6WA9WJ3Uleju4pg=",
+          "verdict": "allow",
+          "reason": "Generated offline regression fixture only"
+        }
+      ],
+      "expect": {
+        "decision": "canonical",
+        "consensus_count": 3
+      }
+    },
+    {
+      "name": "wrong-payload-type",
+      "signatures": [
+        {
+          "organ": "fixture-witness-0",
+          "keyid": "fixture-witness-0-cosign",
+          "payloadType": "application/vnd.example.unrelated-protocol+json",
+          "payload": "eyJhY3Rpb25faGFzaCI6ImFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWEiLCJrZXlpZCI6ImZpeHR1cmUtd2l0bmVzcy0wLWNvc2lnbiIsImxlYW5fc2hhIjoiZml4dHVyZSIsIm9yZ2FuIjoiZml4dHVyZS13aXRuZXNzLTAiLCJyZWFzb24iOiJHZW5lcmF0ZWQgb2ZmbGluZSByZWdyZXNzaW9uIGZpeHR1cmUgb25seSIsInNjaGVtYSI6InN6bC5raGlwdS5vcmdhbl92ZXJkaWN0L3YxIiwidHMiOiIyMDI2LTEwLTA1VDAwOjAwOjAwKzAwOjAwIiwidmVyZGljdCI6ImFsbG93In0=",
+          "signature": "MEQCIBpjPYTFv3Pw9ZFkmh7rrJGevKCn4ZrolBbTGlJMgKxcAiBd6xWGymKleHxpgt/xPOD02z5E2cwd8GuRDKp6g5HLnQ==",
+          "verdict": "allow",
+          "reason": "Generated offline regression fixture only"
+        },
+        {
+          "organ": "fixture-witness-1",
+          "keyid": "fixture-witness-1-cosign",
+          "payloadType": "application/vnd.example.unrelated-protocol+json",
+          "payload": "eyJhY3Rpb25faGFzaCI6ImFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWEiLCJrZXlpZCI6ImZpeHR1cmUtd2l0bmVzcy0xLWNvc2lnbiIsImxlYW5fc2hhIjoiZml4dHVyZSIsIm9yZ2FuIjoiZml4dHVyZS13aXRuZXNzLTEiLCJyZWFzb24iOiJHZW5lcmF0ZWQgb2ZmbGluZSByZWdyZXNzaW9uIGZpeHR1cmUgb25seSIsInNjaGVtYSI6InN6bC5raGlwdS5vcmdhbl92ZXJkaWN0L3YxIiwidHMiOiIyMDI2LTEwLTA1VDAwOjAwOjAwKzAwOjAwIiwidmVyZGljdCI6ImFsbG93In0=",
+          "signature": "MEUCIQCSGqU2CRNA3S2bMTNgPO3qUeqwZpIDtU3XisPu9/v4QgIgaifOAsmQXNbBi8hnEltdds8H8wtBI8WlSB3c8mUj0XY=",
+          "verdict": "allow",
+          "reason": "Generated offline regression fixture only"
+        },
+        {
+          "organ": "fixture-witness-2",
+          "keyid": "fixture-witness-2-cosign",
+          "payloadType": "application/vnd.example.unrelated-protocol+json",
+          "payload": "eyJhY3Rpb25faGFzaCI6ImFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWEiLCJrZXlpZCI6ImZpeHR1cmUtd2l0bmVzcy0yLWNvc2lnbiIsImxlYW5fc2hhIjoiZml4dHVyZSIsIm9yZ2FuIjoiZml4dHVyZS13aXRuZXNzLTIiLCJyZWFzb24iOiJHZW5lcmF0ZWQgb2ZmbGluZSByZWdyZXNzaW9uIGZpeHR1cmUgb25seSIsInNjaGVtYSI6InN6bC5raGlwdS5vcmdhbl92ZXJkaWN0L3YxIiwidHMiOiIyMDI2LTEwLTA1VDAwOjAwOjAwKzAwOjAwIiwidmVyZGljdCI6ImFsbG93In0=",
+          "signature": "MEQCIBQKUSnBg0QSopFqNmeoTOqCiVJJQMwHk8EbeNhwyB4uAiB+ggzXMIc6wXwFo/3WeVTINTARaHCQqdYV54gPT07OIw==",
+          "verdict": "allow",
+          "reason": "Generated offline regression fixture only"
+        }
+      ],
+      "expect": {
+        "decision": "rejected",
+        "consensus_count": 0
+      }
+    },
+    {
+      "name": "wrong-signed-schema",
+      "signatures": [
+        {
+          "organ": "fixture-witness-0",
+          "keyid": "fixture-witness-0-cosign",
+          "payloadType": "application/vnd.szl.khipu.organ-verdict+json",
+          "payload": "eyJhY3Rpb25faGFzaCI6ImFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWEiLCJrZXlpZCI6ImZpeHR1cmUtd2l0bmVzcy0wLWNvc2lnbiIsImxlYW5fc2hhIjoiZml4dHVyZSIsIm9yZ2FuIjoiZml4dHVyZS13aXRuZXNzLTAiLCJyZWFzb24iOiJHZW5lcmF0ZWQgb2ZmbGluZSByZWdyZXNzaW9uIGZpeHR1cmUgb25seSIsInNjaGVtYSI6ImV4YW1wbGUudW5yZWxhdGVkL3YxIiwidHMiOiIyMDI2LTEwLTA1VDAwOjAwOjAwKzAwOjAwIiwidmVyZGljdCI6ImFsbG93In0=",
+          "signature": "MEUCIAxuKBCscyhvPj8g7r46EhKaC2b6s8IHCY0+5S4W/bMUAiEAwzgc3SosH+7LdjTaAfDgyyvqiAeHXmM9GEIQLVxwkNs=",
+          "verdict": "allow",
+          "reason": "Generated offline regression fixture only"
+        },
+        {
+          "organ": "fixture-witness-1",
+          "keyid": "fixture-witness-1-cosign",
+          "payloadType": "application/vnd.szl.khipu.organ-verdict+json",
+          "payload": "eyJhY3Rpb25faGFzaCI6ImFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWEiLCJrZXlpZCI6ImZpeHR1cmUtd2l0bmVzcy0xLWNvc2lnbiIsImxlYW5fc2hhIjoiZml4dHVyZSIsIm9yZ2FuIjoiZml4dHVyZS13aXRuZXNzLTEiLCJyZWFzb24iOiJHZW5lcmF0ZWQgb2ZmbGluZSByZWdyZXNzaW9uIGZpeHR1cmUgb25seSIsInNjaGVtYSI6ImV4YW1wbGUudW5yZWxhdGVkL3YxIiwidHMiOiIyMDI2LTEwLTA1VDAwOjAwOjAwKzAwOjAwIiwidmVyZGljdCI6ImFsbG93In0=",
+          "signature": "MEUCIELm2zEFwx7tlvww4yV/aM0WFzMLWfcc34zJQeqhecENAiEA7GHsd6O/8KqejdRHbs+KqdSvAkBA7s2we1eWLvfDOdo=",
+          "verdict": "allow",
+          "reason": "Generated offline regression fixture only"
+        },
+        {
+          "organ": "fixture-witness-2",
+          "keyid": "fixture-witness-2-cosign",
+          "payloadType": "application/vnd.szl.khipu.organ-verdict+json",
+          "payload": "eyJhY3Rpb25faGFzaCI6ImFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWEiLCJrZXlpZCI6ImZpeHR1cmUtd2l0bmVzcy0yLWNvc2lnbiIsImxlYW5fc2hhIjoiZml4dHVyZSIsIm9yZ2FuIjoiZml4dHVyZS13aXRuZXNzLTIiLCJyZWFzb24iOiJHZW5lcmF0ZWQgb2ZmbGluZSByZWdyZXNzaW9uIGZpeHR1cmUgb25seSIsInNjaGVtYSI6ImV4YW1wbGUudW5yZWxhdGVkL3YxIiwidHMiOiIyMDI2LTEwLTA1VDAwOjAwOjAwKzAwOjAwIiwidmVyZGljdCI6ImFsbG93In0=",
+          "signature": "MEUCIQC1bGgb57x2CKU+XkrOvX2NbXqucNCjr5Jjx/VO606ZyAIgHSurajd6ELtH7+vxUYYed0YtRYcDFwO2XBe4xvZJN/A=",
+          "verdict": "allow",
+          "reason": "Generated offline regression fixture only"
+        }
+      ],
+      "expect": {
+        "decision": "rejected",
+        "consensus_count": 0
+      }
+    },
+    {
+      "name": "wrong-signed-organ",
+      "signatures": [
+        {
+          "organ": "fixture-witness-0",
+          "keyid": "fixture-witness-0-cosign",
+          "payloadType": "application/vnd.szl.khipu.organ-verdict+json",
+          "payload": "eyJhY3Rpb25faGFzaCI6ImFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWEiLCJrZXlpZCI6ImZpeHR1cmUtd2l0bmVzcy0wLWNvc2lnbiIsImxlYW5fc2hhIjoiZml4dHVyZSIsIm9yZ2FuIjoib3RoZXItd2l0bmVzcyIsInJlYXNvbiI6IkdlbmVyYXRlZCBvZmZsaW5lIHJlZ3Jlc3Npb24gZml4dHVyZSBvbmx5Iiwic2NoZW1hIjoic3psLmtoaXB1Lm9yZ2FuX3ZlcmRpY3QvdjEiLCJ0cyI6IjIwMjYtMTAtMDVUMDA6MDA6MDArMDA6MDAiLCJ2ZXJkaWN0IjoiYWxsb3cifQ==",
+          "signature": "MEUCIQCK+NHN8WREWZQ3U0APz6HeMycnftKPOa6D+P9LZd3hvgIgc9s1WngFZWsztbB/KWaUCUZxYBVLYiHvy8wTWb1a3Ng=",
+          "verdict": "allow",
+          "reason": "Generated offline regression fixture only"
+        },
+        {
+          "organ": "fixture-witness-1",
+          "keyid": "fixture-witness-1-cosign",
+          "payloadType": "application/vnd.szl.khipu.organ-verdict+json",
+          "payload": "eyJhY3Rpb25faGFzaCI6ImFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWEiLCJrZXlpZCI6ImZpeHR1cmUtd2l0bmVzcy0xLWNvc2lnbiIsImxlYW5fc2hhIjoiZml4dHVyZSIsIm9yZ2FuIjoib3RoZXItd2l0bmVzcyIsInJlYXNvbiI6IkdlbmVyYXRlZCBvZmZsaW5lIHJlZ3Jlc3Npb24gZml4dHVyZSBvbmx5Iiwic2NoZW1hIjoic3psLmtoaXB1Lm9yZ2FuX3ZlcmRpY3QvdjEiLCJ0cyI6IjIwMjYtMTAtMDVUMDA6MDA6MDArMDA6MDAiLCJ2ZXJkaWN0IjoiYWxsb3cifQ==",
+          "signature": "MEUCIBc5yqrNiImYfcoq9ItXGCthdzHl02vQW1/2Q0XWjDcaAiEAiothAkfcTJpxcDVl8531knPCRwle/yd0IYSMTt9etbY=",
+          "verdict": "allow",
+          "reason": "Generated offline regression fixture only"
+        },
+        {
+          "organ": "fixture-witness-2",
+          "keyid": "fixture-witness-2-cosign",
+          "payloadType": "application/vnd.szl.khipu.organ-verdict+json",
+          "payload": "eyJhY3Rpb25faGFzaCI6ImFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWEiLCJrZXlpZCI6ImZpeHR1cmUtd2l0bmVzcy0yLWNvc2lnbiIsImxlYW5fc2hhIjoiZml4dHVyZSIsIm9yZ2FuIjoib3RoZXItd2l0bmVzcyIsInJlYXNvbiI6IkdlbmVyYXRlZCBvZmZsaW5lIHJlZ3Jlc3Npb24gZml4dHVyZSBvbmx5Iiwic2NoZW1hIjoic3psLmtoaXB1Lm9yZ2FuX3ZlcmRpY3QvdjEiLCJ0cyI6IjIwMjYtMTAtMDVUMDA6MDA6MDArMDA6MDAiLCJ2ZXJkaWN0IjoiYWxsb3cifQ==",
+          "signature": "MEUCIQDqe+IraU0OTJ7zhTPloSB+eY2DNlocQeSWrsjc3Jo+/QIgcFQaZw1TcHPUSU83hitcCZCojO1G84e6/8gDJ1BAabk=",
+          "verdict": "allow",
+          "reason": "Generated offline regression fixture only"
+        }
+      ],
+      "expect": {
+        "decision": "rejected",
+        "consensus_count": 0
+      }
+    },
+    {
+      "name": "wrong-signed-keyid",
+      "signatures": [
+        {
+          "organ": "fixture-witness-0",
+          "keyid": "fixture-witness-0-cosign",
+          "payloadType": "application/vnd.szl.khipu.organ-verdict+json",
+          "payload": "eyJhY3Rpb25faGFzaCI6ImFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWEiLCJrZXlpZCI6Im90aGVyLWtleSIsImxlYW5fc2hhIjoiZml4dHVyZSIsIm9yZ2FuIjoiZml4dHVyZS13aXRuZXNzLTAiLCJyZWFzb24iOiJHZW5lcmF0ZWQgb2ZmbGluZSByZWdyZXNzaW9uIGZpeHR1cmUgb25seSIsInNjaGVtYSI6InN6bC5raGlwdS5vcmdhbl92ZXJkaWN0L3YxIiwidHMiOiIyMDI2LTEwLTA1VDAwOjAwOjAwKzAwOjAwIiwidmVyZGljdCI6ImFsbG93In0=",
+          "signature": "MEQCIGAteuUR6n8QuJz15ZyWNkzIKK9JKOHVFJp0gEZ0y44AAiBU9yzhkiVntUmdps5c8ZvYF3SuQ18YW0DttmJxLcBTQQ==",
+          "verdict": "allow",
+          "reason": "Generated offline regression fixture only"
+        },
+        {
+          "organ": "fixture-witness-1",
+          "keyid": "fixture-witness-1-cosign",
+          "payloadType": "application/vnd.szl.khipu.organ-verdict+json",
+          "payload": "eyJhY3Rpb25faGFzaCI6ImFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWEiLCJrZXlpZCI6Im90aGVyLWtleSIsImxlYW5fc2hhIjoiZml4dHVyZSIsIm9yZ2FuIjoiZml4dHVyZS13aXRuZXNzLTEiLCJyZWFzb24iOiJHZW5lcmF0ZWQgb2ZmbGluZSByZWdyZXNzaW9uIGZpeHR1cmUgb25seSIsInNjaGVtYSI6InN6bC5raGlwdS5vcmdhbl92ZXJkaWN0L3YxIiwidHMiOiIyMDI2LTEwLTA1VDAwOjAwOjAwKzAwOjAwIiwidmVyZGljdCI6ImFsbG93In0=",
+          "signature": "MEUCIQCAa9oVLhhchloqJGQ2Nb60ta896oLMIn5//b/ylZb3cgIgfqQ3KcTyAvgNcYP4a4nw/SBuB73tjcXbtJPHqDUcEMg=",
+          "verdict": "allow",
+          "reason": "Generated offline regression fixture only"
+        },
+        {
+          "organ": "fixture-witness-2",
+          "keyid": "fixture-witness-2-cosign",
+          "payloadType": "application/vnd.szl.khipu.organ-verdict+json",
+          "payload": "eyJhY3Rpb25faGFzaCI6ImFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWEiLCJrZXlpZCI6Im90aGVyLWtleSIsImxlYW5fc2hhIjoiZml4dHVyZSIsIm9yZ2FuIjoiZml4dHVyZS13aXRuZXNzLTIiLCJyZWFzb24iOiJHZW5lcmF0ZWQgb2ZmbGluZSByZWdyZXNzaW9uIGZpeHR1cmUgb25seSIsInNjaGVtYSI6InN6bC5raGlwdS5vcmdhbl92ZXJkaWN0L3YxIiwidHMiOiIyMDI2LTEwLTA1VDAwOjAwOjAwKzAwOjAwIiwidmVyZGljdCI6ImFsbG93In0=",
+          "signature": "MEQCICvcCzFoPQNqL6dU8VDRfiNDa60frcW7OMN7TKbJm3WYAiA5aHCwPn+GzMhTMTQf1GSajQUovC9gELm8cw5jDpHSDw==",
+          "verdict": "allow",
+          "reason": "Generated offline regression fixture only"
+        }
+      ],
+      "expect": {
+        "decision": "rejected",
+        "consensus_count": 0
+      }
+    },
+    {
+      "name": "wrong-outer-keyid",
+      "signatures": [
+        {
+          "organ": "fixture-witness-0",
+          "keyid": "other-key",
+          "payloadType": "application/vnd.szl.khipu.organ-verdict+json",
+          "payload": "eyJhY3Rpb25faGFzaCI6ImFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWEiLCJrZXlpZCI6ImZpeHR1cmUtd2l0bmVzcy0wLWNvc2lnbiIsImxlYW5fc2hhIjoiZml4dHVyZSIsIm9yZ2FuIjoiZml4dHVyZS13aXRuZXNzLTAiLCJyZWFzb24iOiJHZW5lcmF0ZWQgb2ZmbGluZSByZWdyZXNzaW9uIGZpeHR1cmUgb25seSIsInNjaGVtYSI6InN6bC5raGlwdS5vcmdhbl92ZXJkaWN0L3YxIiwidHMiOiIyMDI2LTEwLTA1VDAwOjAwOjAwKzAwOjAwIiwidmVyZGljdCI6ImFsbG93In0=",
+          "signature": "MEYCIQCRdJNKiHa36vFIjWw+MsLcJ5ZbC191zHE/UYHWpE3TIQIhALWQKEhRFxiM1kSGSQM5WJBf15VZmRTJ+iq8gQ5Syjk7",
+          "verdict": "allow",
+          "reason": "Generated offline regression fixture only"
+        },
+        {
+          "organ": "fixture-witness-1",
+          "keyid": "other-key",
+          "payloadType": "application/vnd.szl.khipu.organ-verdict+json",
+          "payload": "eyJhY3Rpb25faGFzaCI6ImFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWEiLCJrZXlpZCI6ImZpeHR1cmUtd2l0bmVzcy0xLWNvc2lnbiIsImxlYW5fc2hhIjoiZml4dHVyZSIsIm9yZ2FuIjoiZml4dHVyZS13aXRuZXNzLTEiLCJyZWFzb24iOiJHZW5lcmF0ZWQgb2ZmbGluZSByZWdyZXNzaW9uIGZpeHR1cmUgb25seSIsInNjaGVtYSI6InN6bC5raGlwdS5vcmdhbl92ZXJkaWN0L3YxIiwidHMiOiIyMDI2LTEwLTA1VDAwOjAwOjAwKzAwOjAwIiwidmVyZGljdCI6ImFsbG93In0=",
+          "signature": "MEUCIHbUxurBSvOyEAwJJTwFACPeUYqOl1cMQOhKC9zbti32AiEA91YX6RViogENliXA1//LAxD4pMLrzodFFVjt2viikRA=",
+          "verdict": "allow",
+          "reason": "Generated offline regression fixture only"
+        },
+        {
+          "organ": "fixture-witness-2",
+          "keyid": "other-key",
+          "payloadType": "application/vnd.szl.khipu.organ-verdict+json",
+          "payload": "eyJhY3Rpb25faGFzaCI6ImFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWEiLCJrZXlpZCI6ImZpeHR1cmUtd2l0bmVzcy0yLWNvc2lnbiIsImxlYW5fc2hhIjoiZml4dHVyZSIsIm9yZ2FuIjoiZml4dHVyZS13aXRuZXNzLTIiLCJyZWFzb24iOiJHZW5lcmF0ZWQgb2ZmbGluZSByZWdyZXNzaW9uIGZpeHR1cmUgb25seSIsInNjaGVtYSI6InN6bC5raGlwdS5vcmdhbl92ZXJkaWN0L3YxIiwidHMiOiIyMDI2LTEwLTA1VDAwOjAwOjAwKzAwOjAwIiwidmVyZGljdCI6ImFsbG93In0=",
+          "signature": "MEUCIQDPwCyT2IV5l42BXOJgGsfHd6NpyYDZbUZhDenuRVp9AQIgKd12zAJi6w1HL8cj2BMDjXUm1bA3X0lUrgdcgZCplAA=",
+          "verdict": "allow",
+          "reason": "Generated offline regression fixture only"
+        }
+      ],
+      "expect": {
+        "decision": "rejected",
+        "consensus_count": 0
+      }
+    },
+    {
+      "name": "missing-signed-schema",
+      "signatures": [
+        {
+          "organ": "fixture-witness-0",
+          "keyid": "fixture-witness-0-cosign",
+          "payloadType": "application/vnd.szl.khipu.organ-verdict+json",
+          "payload": "eyJhY3Rpb25faGFzaCI6ImFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWEiLCJrZXlpZCI6ImZpeHR1cmUtd2l0bmVzcy0wLWNvc2lnbiIsImxlYW5fc2hhIjoiZml4dHVyZSIsIm9yZ2FuIjoiZml4dHVyZS13aXRuZXNzLTAiLCJyZWFzb24iOiJHZW5lcmF0ZWQgb2ZmbGluZSByZWdyZXNzaW9uIGZpeHR1cmUgb25seSIsInRzIjoiMjAyNi0xMC0wNVQwMDowMDowMCswMDowMCIsInZlcmRpY3QiOiJhbGxvdyJ9",
+          "signature": "MEYCIQCAGCv+lPkYDVrA5woEdZAyz7KynxBYH9cSul6yd2O1nAIhAMKdOhLJ2Z2rODHxw0eocrOFH3HCAj/cKKoT+GV7Q02b",
+          "verdict": "allow",
+          "reason": "Generated offline regression fixture only"
+        },
+        {
+          "organ": "fixture-witness-1",
+          "keyid": "fixture-witness-1-cosign",
+          "payloadType": "application/vnd.szl.khipu.organ-verdict+json",
+          "payload": "eyJhY3Rpb25faGFzaCI6ImFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWEiLCJrZXlpZCI6ImZpeHR1cmUtd2l0bmVzcy0xLWNvc2lnbiIsImxlYW5fc2hhIjoiZml4dHVyZSIsIm9yZ2FuIjoiZml4dHVyZS13aXRuZXNzLTEiLCJyZWFzb24iOiJHZW5lcmF0ZWQgb2ZmbGluZSByZWdyZXNzaW9uIGZpeHR1cmUgb25seSIsInRzIjoiMjAyNi0xMC0wNVQwMDowMDowMCswMDowMCIsInZlcmRpY3QiOiJhbGxvdyJ9",
+          "signature": "MEQCIBcqUGXdUiMRkD6dICvEApfYah9z7d20S7vBFbo30kanAiA0PB7Z4MWE3NRQ8Tl0jz5liaaWrbEJsiJfcf0RUCTJ5Q==",
+          "verdict": "allow",
+          "reason": "Generated offline regression fixture only"
+        },
+        {
+          "organ": "fixture-witness-2",
+          "keyid": "fixture-witness-2-cosign",
+          "payloadType": "application/vnd.szl.khipu.organ-verdict+json",
+          "payload": "eyJhY3Rpb25faGFzaCI6ImFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWEiLCJrZXlpZCI6ImZpeHR1cmUtd2l0bmVzcy0yLWNvc2lnbiIsImxlYW5fc2hhIjoiZml4dHVyZSIsIm9yZ2FuIjoiZml4dHVyZS13aXRuZXNzLTIiLCJyZWFzb24iOiJHZW5lcmF0ZWQgb2ZmbGluZSByZWdyZXNzaW9uIGZpeHR1cmUgb25seSIsInRzIjoiMjAyNi0xMC0wNVQwMDowMDowMCswMDowMCIsInZlcmRpY3QiOiJhbGxvdyJ9",
+          "signature": "MEMCIHBkAchn9swUXE0NyWOCW8g3fkJMd5zoPmbkweLTq7p3Ah8TgAguAf9i9AQvTfo9A0lItisUX708pPKbEo5oQ/D8",
+          "verdict": "allow",
+          "reason": "Generated offline regression fixture only"
+        }
+      ],
+      "expect": {
+        "decision": "rejected",
+        "consensus_count": 0
+      }
+    },
+    {
+      "name": "missing-signed-organ",
+      "signatures": [
+        {
+          "organ": "fixture-witness-0",
+          "keyid": "fixture-witness-0-cosign",
+          "payloadType": "application/vnd.szl.khipu.organ-verdict+json",
+          "payload": "eyJhY3Rpb25faGFzaCI6ImFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWEiLCJrZXlpZCI6ImZpeHR1cmUtd2l0bmVzcy0wLWNvc2lnbiIsImxlYW5fc2hhIjoiZml4dHVyZSIsInJlYXNvbiI6IkdlbmVyYXRlZCBvZmZsaW5lIHJlZ3Jlc3Npb24gZml4dHVyZSBvbmx5Iiwic2NoZW1hIjoic3psLmtoaXB1Lm9yZ2FuX3ZlcmRpY3QvdjEiLCJ0cyI6IjIwMjYtMTAtMDVUMDA6MDA6MDArMDA6MDAiLCJ2ZXJkaWN0IjoiYWxsb3cifQ==",
+          "signature": "MEUCIEXiJsTwCxZW6qr6fsR2jIhzeWAE6GIYoLJEzktnbraoAiEAi8HmkE9OJFwECaSRj5rZB51zxb7j/9yB9X3tP4zKUjc=",
+          "verdict": "allow",
+          "reason": "Generated offline regression fixture only"
+        },
+        {
+          "organ": "fixture-witness-1",
+          "keyid": "fixture-witness-1-cosign",
+          "payloadType": "application/vnd.szl.khipu.organ-verdict+json",
+          "payload": "eyJhY3Rpb25faGFzaCI6ImFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWEiLCJrZXlpZCI6ImZpeHR1cmUtd2l0bmVzcy0xLWNvc2lnbiIsImxlYW5fc2hhIjoiZml4dHVyZSIsInJlYXNvbiI6IkdlbmVyYXRlZCBvZmZsaW5lIHJlZ3Jlc3Npb24gZml4dHVyZSBvbmx5Iiwic2NoZW1hIjoic3psLmtoaXB1Lm9yZ2FuX3ZlcmRpY3QvdjEiLCJ0cyI6IjIwMjYtMTAtMDVUMDA6MDA6MDArMDA6MDAiLCJ2ZXJkaWN0IjoiYWxsb3cifQ==",
+          "signature": "MEQCIBYNRItIDZDVL09cOYsxYe0hOFk6mRqU3LqA8DAZsxD2AiAQd9j06j2tDQnxCBQG5YBdp734XWr1piTAw5u2fWKlvQ==",
+          "verdict": "allow",
+          "reason": "Generated offline regression fixture only"
+        },
+        {
+          "organ": "fixture-witness-2",
+          "keyid": "fixture-witness-2-cosign",
+          "payloadType": "application/vnd.szl.khipu.organ-verdict+json",
+          "payload": "eyJhY3Rpb25faGFzaCI6ImFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWEiLCJrZXlpZCI6ImZpeHR1cmUtd2l0bmVzcy0yLWNvc2lnbiIsImxlYW5fc2hhIjoiZml4dHVyZSIsInJlYXNvbiI6IkdlbmVyYXRlZCBvZmZsaW5lIHJlZ3Jlc3Npb24gZml4dHVyZSBvbmx5Iiwic2NoZW1hIjoic3psLmtoaXB1Lm9yZ2FuX3ZlcmRpY3QvdjEiLCJ0cyI6IjIwMjYtMTAtMDVUMDA6MDA6MDArMDA6MDAiLCJ2ZXJkaWN0IjoiYWxsb3cifQ==",
+          "signature": "MEUCIQDhCTmwB6Z30xU7NeDAiHigd0yX5K8lMc+EmamHlD3vVgIgfFwfte59Y0oSjBdfPKbr622+kucR7T+cpCL24FBqR2g=",
+          "verdict": "allow",
+          "reason": "Generated offline regression fixture only"
+        }
+      ],
+      "expect": {
+        "decision": "rejected",
+        "consensus_count": 0
+      }
+    },
+    {
+      "name": "missing-signed-keyid",
+      "signatures": [
+        {
+          "organ": "fixture-witness-0",
+          "keyid": "fixture-witness-0-cosign",
+          "payloadType": "application/vnd.szl.khipu.organ-verdict+json",
+          "payload": "eyJhY3Rpb25faGFzaCI6ImFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWEiLCJsZWFuX3NoYSI6ImZpeHR1cmUiLCJvcmdhbiI6ImZpeHR1cmUtd2l0bmVzcy0wIiwicmVhc29uIjoiR2VuZXJhdGVkIG9mZmxpbmUgcmVncmVzc2lvbiBmaXh0dXJlIG9ubHkiLCJzY2hlbWEiOiJzemwua2hpcHUub3JnYW5fdmVyZGljdC92MSIsInRzIjoiMjAyNi0xMC0wNVQwMDowMDowMCswMDowMCIsInZlcmRpY3QiOiJhbGxvdyJ9",
+          "signature": "MEUCIQD6nLIhl6Ff1DoY6lzlwoTUXHpKtYQKMMSJoPVGkpSp5wIgZ/7ISUWnJTdKgTqVQ3qDLfBsKo1vEuuNJGdra/Jl+2U=",
+          "verdict": "allow",
+          "reason": "Generated offline regression fixture only"
+        },
+        {
+          "organ": "fixture-witness-1",
+          "keyid": "fixture-witness-1-cosign",
+          "payloadType": "application/vnd.szl.khipu.organ-verdict+json",
+          "payload": "eyJhY3Rpb25faGFzaCI6ImFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWEiLCJsZWFuX3NoYSI6ImZpeHR1cmUiLCJvcmdhbiI6ImZpeHR1cmUtd2l0bmVzcy0xIiwicmVhc29uIjoiR2VuZXJhdGVkIG9mZmxpbmUgcmVncmVzc2lvbiBmaXh0dXJlIG9ubHkiLCJzY2hlbWEiOiJzemwua2hpcHUub3JnYW5fdmVyZGljdC92MSIsInRzIjoiMjAyNi0xMC0wNVQwMDowMDowMCswMDowMCIsInZlcmRpY3QiOiJhbGxvdyJ9",
+          "signature": "MEYCIQDHfBljX19S7GebrbTUhXpYQOAhk88EJ8ieFikua0VWpQIhAKvJKSdntWDBqKF4Zspr1CkLOGxPXtgawcUm5ce+F3q/",
+          "verdict": "allow",
+          "reason": "Generated offline regression fixture only"
+        },
+        {
+          "organ": "fixture-witness-2",
+          "keyid": "fixture-witness-2-cosign",
+          "payloadType": "application/vnd.szl.khipu.organ-verdict+json",
+          "payload": "eyJhY3Rpb25faGFzaCI6ImFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWEiLCJsZWFuX3NoYSI6ImZpeHR1cmUiLCJvcmdhbiI6ImZpeHR1cmUtd2l0bmVzcy0yIiwicmVhc29uIjoiR2VuZXJhdGVkIG9mZmxpbmUgcmVncmVzc2lvbiBmaXh0dXJlIG9ubHkiLCJzY2hlbWEiOiJzemwua2hpcHUub3JnYW5fdmVyZGljdC92MSIsInRzIjoiMjAyNi0xMC0wNVQwMDowMDowMCswMDowMCIsInZlcmRpY3QiOiJhbGxvdyJ9",
+          "signature": "MEYCIQDfidSR2BQL/rmjGWtw8gxsczLssT4lWfynrS3ZJtSrpgIhAJhlZ6AvYgdzMCsSrnoRkFUKTSunvuQc4IFcR2cYrL+P",
+          "verdict": "allow",
+          "reason": "Generated offline regression fixture only"
+        }
+      ],
+      "expect": {
+        "decision": "rejected",
+        "consensus_count": 0
+      }
+    }
+  ]
+}

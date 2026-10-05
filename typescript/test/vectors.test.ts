@@ -5,9 +5,10 @@ import { join } from "node:path";
 import { tally, OrganVerdict } from "../src/index.js";
 
 const VEC = join(__dirname, "..", "..", "testdata", "vectors.json");
+const BOUNDARY_VEC = join(__dirname, "..", "..", "testdata", "domain-identity-binding.json");
 
-function run(): number {
-  const v = JSON.parse(readFileSync(VEC, "utf-8"));
+function run(path: string): number {
+  const v = JSON.parse(readFileSync(path, "utf-8"));
   const pubkeys: Record<string, string> = v.pubkeys;
   let failures = 0;
   for (const c of v.cases) {
@@ -20,7 +21,7 @@ function run(): number {
   return failures;
 }
 
-const failures = run();
+const failures = run(VEC) + run(BOUNDARY_VEC);
 if (failures > 0) {
   console.error(`${failures} TS vector cases failed`);
   process.exit(1);
