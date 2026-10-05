@@ -9,10 +9,11 @@ from khipu_consensus import tally  # noqa: E402
 
 HERE = os.path.dirname(__file__)
 VEC = os.path.normpath(os.path.join(HERE, "..", "..", "testdata", "vectors.json"))
+BOUNDARY_VEC = os.path.normpath(os.path.join(HERE, "..", "..", "testdata", "domain-identity-binding.json"))
 
 
-def test_vectors():
-    v = json.load(open(VEC))
+def _check_vectors(path):
+    v = json.load(open(path))
     pubkeys = v["pubkeys"]
     failures = []
     for case in v["cases"]:
@@ -26,6 +27,15 @@ def test_vectors():
     assert not failures, f"failed cases: {failures}"
 
 
+def test_vectors():
+    _check_vectors(VEC)
+
+
+def test_domain_and_identity_binding_vectors():
+    _check_vectors(BOUNDARY_VEC)
+
+
 if __name__ == "__main__":
     test_vectors()
+    test_domain_and_identity_binding_vectors()
     print("ALL PYTHON VECTOR TESTS PASSED")

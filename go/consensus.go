@@ -169,6 +169,15 @@ func VerifyVerdict(v OrganVerdict, publicKeyPem, actionHash string) OrganCheck {
 	if pt == "" {
 		pt = OrganVerdictPayloadType
 	}
+	if pt != OrganVerdictPayloadType {
+		chk.Reason = "payload-type-mismatch"
+		return chk
+	}
+	expectedKeyid := v.Organ + "-cosign"
+	if v.Organ == "" || v.Keyid != expectedKeyid {
+		chk.Reason = "witness-identity-mismatch"
+		return chk
+	}
 	pub, err := loadECDSAPublic(publicKeyPem)
 	if err != nil {
 		chk.Reason = err.Error()
@@ -180,11 +189,22 @@ func VerifyVerdict(v OrganVerdict, publicKeyPem, actionHash string) OrganCheck {
 		return chk
 	}
 	var decoded struct {
+		Schema     string `json:"schema"`
+		Organ      string `json:"organ"`
+		Keyid      string `json:"keyid"`
 		ActionHash string `json:"action_hash"`
 		Verdict    string `json:"verdict"`
 	}
 	if err := json.Unmarshal(body, &decoded); err != nil {
 		chk.Reason = "bad statement json"
+		return chk
+	}
+	if decoded.Schema != "szl.khipu.organ_verdict/v1" {
+		chk.Reason = "statement-schema-mismatch"
+		return chk
+	}
+	if decoded.Organ != v.Organ || decoded.Keyid != expectedKeyid {
+		chk.Reason = "signed-witness-identity-mismatch"
 		return chk
 	}
 	chk.Valid = true

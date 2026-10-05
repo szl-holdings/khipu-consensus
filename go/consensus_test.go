@@ -24,7 +24,16 @@ type vectorFile struct {
 }
 
 func TestVectors(t *testing.T) {
-	path := filepath.Join("..", "testdata", "vectors.json")
+	checkVectors(t, "vectors.json")
+}
+
+func TestDomainAndIdentityBindingVectors(t *testing.T) {
+	checkVectors(t, "domain-identity-binding.json")
+}
+
+func checkVectors(t *testing.T, name string) {
+	t.Helper()
+	path := filepath.Join("..", "testdata", name)
 	raw, err := os.ReadFile(path)
 	if err != nil {
 		t.Fatalf("read vectors: %v", err)

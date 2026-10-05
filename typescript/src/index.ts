@@ -94,9 +94,13 @@ export function verifyVerdict(v: OrganVerdict, publicKeyPem: string, actionHash:
     actionHashMatch: false, counts: false,
   };
   if (!v.payload || !v.signature) return { ...base, reason: "missing payload/signature" };
+  const payloadType = v.payloadType ?? ORGAN_VERDICT_PAYLOAD_TYPE;
+  if (payloadType !== ORGAN_VERDICT_PAYLOAD_TYPE) return { ...base, reason: "payload-type-mismatch" };
+  const expectedKeyid = `${v.organ}-cosign`;
+  if (!v.organ || v.keyid !== expectedKeyid) return { ...base, reason: "witness-identity-mismatch" };
   try {
     const body = Buffer.from(v.payload, "base64");
-    const toVerify = pae(v.payloadType ?? ORGAN_VERDICT_PAYLOAD_TYPE, body);
+    const toVerify = pae(payloadType, body);
     const pub: KeyObject = createPublicKey(publicKeyPem);
     const verifier = createVerify("SHA256");
     verifier.update(toVerify);
@@ -104,6 +108,13 @@ export function verifyVerdict(v: OrganVerdict, publicKeyPem: string, actionHash:
     const ok = verifier.verify({ key: pub, dsaEncoding: "der" }, Buffer.from(v.signature, "base64"));
     if (!ok) return { ...base, reason: "signature mismatch" };
     const decoded = JSON.parse(body.toString("utf-8"));
+    if (!decoded || typeof decoded !== "object" || Array.isArray(decoded)
+        || decoded.schema !== "szl.khipu.organ_verdict/v1") {
+      return { ...base, reason: "statement-schema-mismatch" };
+    }
+    if (decoded.organ !== v.organ || decoded.keyid !== expectedKeyid) {
+      return { ...base, reason: "signed-witness-identity-mismatch" };
+    }
     const ahMatch = decoded.action_hash === actionHash;
     const verdict = decoded.verdict;
     return {

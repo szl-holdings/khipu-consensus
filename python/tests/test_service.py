@@ -87,3 +87,29 @@ def test_verify_route_rejects_escaped_lone_surrogate(monkeypatch):
     assert response.json() == {
         "detail": "receipt contains text that is not valid UTF-8",
     }
+
+
+@pytest.mark.parametrize("case", [
+    case for case in json.loads((REPOSITORY_ROOT / "testdata/domain-identity-binding.json").read_text())['cases']
+    if case['name'] != 'omitted-payload-type'
+], ids=lambda case: case['name'])
+def test_verify_route_binds_signed_protocol_and_witness(monkeypatch, case):
+    vectors = json.loads((REPOSITORY_ROOT / "testdata/domain-identity-binding.json").read_text())
+    registry = service_app.WitnessRegistry.from_dict({
+        "threshold": vectors["threshold"],
+        "witnesses": [{"organ": organ, "public_key_pem": pem} for organ, pem in vectors["pubkeys"].items()],
+    })
+    monkeypatch.setattr(service_app, "REGISTRY", registry)
+    receipt = {
+        "schema": service_app.RECEIPT_SCHEMA,
+        "action_hash": vectors["action_hash"],
+        "threshold": vectors["threshold"],
+        "n": vectors["n"],
+        "decision": "canonical",
+        "signatures": case["signatures"],
+        "witnesses": registry.public(),
+    }
+    response = TestClient(service_app.app).post("/v1/verify", json={"receipt": receipt})
+    assert response.status_code == 200
+    assert response.json()["decision"] == case["expect"]["decision"]
+    assert response.json()["consensus_count"] == case["expect"]["consensus_count"]

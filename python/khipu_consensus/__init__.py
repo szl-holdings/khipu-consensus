@@ -118,6 +118,13 @@ def verify_verdict(v: OrganVerdict, public_key_pem: str, action_hash: str) -> Or
 
     if not v.payload_b64 or not v.signature_b64:
         return OrganCheck(v.organ, v.keyid, False, None, False, False, "missing payload/signature")
+    # A valid signature from the same key in a different DSSE domain is not a
+    # Khipu witness verdict. Bind both the protocol and expected wire identity.
+    if v.payload_type != ORGAN_VERDICT_PAYLOAD_TYPE:
+        return OrganCheck(v.organ, v.keyid, False, None, False, False, "payload-type-mismatch")
+    expected_keyid = f"{v.organ}-cosign"
+    if not v.organ or v.keyid != expected_keyid:
+        return OrganCheck(v.organ, v.keyid, False, None, False, False, "witness-identity-mismatch")
     try:
         body = base64.b64decode(v.payload_b64)
         to_verify = pae(v.payload_type, body)
@@ -127,6 +134,10 @@ def verify_verdict(v: OrganVerdict, public_key_pem: str, action_hash: str) -> Or
         except InvalidSignature:
             return OrganCheck(v.organ, v.keyid, False, None, False, False, "signature mismatch")
         decoded = json.loads(body)
+        if not isinstance(decoded, dict) or decoded.get("schema") != "szl.khipu.organ_verdict/v1":
+            return OrganCheck(v.organ, v.keyid, False, None, False, False, "statement-schema-mismatch")
+        if decoded.get("organ") != v.organ or decoded.get("keyid") != expected_keyid:
+            return OrganCheck(v.organ, v.keyid, False, None, False, False, "signed-witness-identity-mismatch")
         ah_match = decoded.get("action_hash") == action_hash
         verdict = decoded.get("verdict")
         counts = ah_match and verdict == "allow"
