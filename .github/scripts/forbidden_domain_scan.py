@@ -17,17 +17,26 @@ structured JSON so a newline-containing filename cannot split the file list, app
 the exemption to source CONTENT only (never a path), and FAILS CLOSED (exit 2) on any
 scanner/tool error — a timeout or missing tool is never a silent pass.
 
+Scope is regular files recorded in the Git index, including hidden and ignored
+tracked files. Untracked outputs, Git metadata, symlinks and submodule contents
+are not scanned. Ignore files and local ripgrep configuration cannot hide a
+tracked source file. No extension exclusion is applied.
+
 Exit codes: 0 = clean, 1 = violations found, 2 = scan could not complete.
 Keep in sync with alignment/templates/workflows/forbidden-domain.yml.
 """
 import base64
 import json
+import os
+from pathlib import Path
+import stat
 import subprocess
 import sys
 
 DOMAIN = r"(?<!-)a11oy\.com"
 EXEMPTION = r"never|forbidden|not in|assertNotIn|does not appear|is not a surface|blocklist"
 RG = "rg"   # module-level so tests can point it at a missing binary (fail-closed path)
+COMMAND_TIMEOUT_SECONDS = 30
 
 
 def fail(message: str):
@@ -35,14 +44,15 @@ def fail(message: str):
     raise SystemExit(2)
 
 
-def rg(arguments, source=None):
+def rg(arguments, source=None, *, cwd=None):
     try:
         result = subprocess.run(
-            [RG, *arguments], input=source, stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE, check=False,
+            [RG, "--no-config", *arguments], input=source, stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE, check=False, cwd=cwd,
+            timeout=COMMAND_TIMEOUT_SECONDS,
         )
-    except OSError as error:
-        fail(f"ripgrep could not run ({error})")
+    except (OSError, subprocess.TimeoutExpired) as error:
+        fail(f"ripgrep could not complete ({type(error).__name__})")
     if result.returncode not in (0, 1):
         # Never relay raw stderr: filenames can contain workflow log commands.
         fail(f"ripgrep exited with status {result.returncode}")
@@ -60,10 +70,49 @@ def raw(field):
     raise ValueError("missing ripgrep text/bytes value")
 
 
-def collect_matches(root="."):
-    """Return [(path_bytes, line_number, line_bytes)] for every line matching DOMAIN,
-    parsed from ripgrep's structured JSON (newline-safe). Fails closed on any error."""
-    scan = rg(["--json", "--hidden", "-P", DOMAIN, "--glob", "!.git", root])
+def tracked_sources(root):
+    """Enumerate the index with NUL framing; never use ignore rules as authority."""
+    try:
+        directory = Path(root).resolve(strict=True)
+        result = subprocess.run(
+            ["git", "-C", os.fspath(directory), "ls-files", "--stage", "-z", "--", "."],
+            stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=False,
+            timeout=COMMAND_TIMEOUT_SECONDS,
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        fail("Git source enumeration could not run")
+    if result.returncode != 0 or (result.stdout and not result.stdout.endswith(b"\0")):
+        fail("Git source enumeration did not complete")
+    paths, seen = [], set()
+    try:
+        for record in result.stdout.split(b"\0")[:-1]:
+            metadata, path = record.split(b"\t", 1)
+            mode, _object_id, stage = metadata.split()
+            if stage != b"0" or not path or path in seen:
+                raise ValueError("unmerged or duplicate index entry")
+            seen.add(path)
+            if mode in (b"120000", b"160000"):
+                continue  # Preserve the no-follow and no-submodule scope.
+            parts = path.split(b"/")
+            if mode not in (b"100644", b"100755") or any(
+                part in (b"", b".", b"..", b".git") for part in parts
+            ):
+                raise ValueError("unsupported tracked path")
+            current = directory
+            for index, part in enumerate(parts):
+                current = current / os.fsdecode(part)
+                observed = current.lstat().st_mode
+                expected = stat.S_ISREG if index == len(parts) - 1 else stat.S_ISDIR
+                if not expected(observed):
+                    raise ValueError("tracked path type changed")
+            paths.append(path)
+    except (OSError, ValueError, TypeError):
+        fail("tracked source paths are missing, unresolved or changed")
+    return directory, paths
+
+
+def batch_matches(scan, expected_paths):
+    """Parse one explicit tracked-file batch; inconsistent results fail closed."""
     matches = []
     summary = None
     try:
@@ -74,6 +123,8 @@ def collect_matches(root="."):
                 raise ValueError("invalid or trailing ripgrep record")
             if kind == "match":
                 path, line = raw(data["path"]), raw(data["lines"])
+                if path not in expected_paths:
+                    raise ValueError("result outside tracked source scope")
                 number = data["line_number"]
                 if type(number) is not int or number < 1:
                     raise ValueError("invalid source line number")
@@ -90,6 +141,32 @@ def collect_matches(root="."):
             raise ValueError("incomplete or inconsistent ripgrep results")
     except (ValueError, KeyError, TypeError, UnicodeError) as error:
         fail(f"invalid ripgrep JSON ({error})")
+    return matches
+
+
+def collect_matches(root="."):
+    """Scan only tracked regular files, independently of every ignore mechanism."""
+    directory, paths = tracked_sources(root)
+    # An empty repository must not conceal a missing scanner dependency.
+    if rg(["--version"]).returncode != 0:
+        fail("ripgrep version check did not complete")
+    matches, batch, size = [], [], 0
+
+    def collect(values):
+        # A tracked file named '-' must never be interpreted as stdin.
+        arguments = [b"./" + value for value in values]
+        scan = rg(["--json", "--hidden", "--no-ignore", "-P", DOMAIN,
+                   "--glob", "!.git", "--", *arguments], cwd=directory)
+        return batch_matches(scan, set(arguments))
+
+    for path in paths:
+        if batch and (len(batch) >= 128 or size + len(path) + 1 > 16384):
+            matches.extend(collect(batch))
+            batch, size = [], 0
+        batch.append(path)
+        size += len(path) + 1
+    if batch:
+        matches.extend(collect(batch))
     return matches
 
 
