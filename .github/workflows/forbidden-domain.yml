@@ -8,11 +8,12 @@
 # surfaces are a-11-oy.com (product) and a11oy.net (proof).
 #
 # Fail-closed hardening (2026-10-15):
-#   - the scanner FAILS the gate on any ripgrep error (exit >= 2); it never
-#     passes silently on a broken scan.
-#   - exemptions are judged on the matched CONTENT only (the path is stripped
-#     with -I), so an exemption word in a FILE PATH can no longer hide a real
-#     violation.
+#   - FAILS the gate on any ripgrep error (exit >= 2); never passes silently.
+#   - exemptions are judged on the matched CONTENT only (-I strips the path), so an
+#     exemption word in a FILE PATH cannot hide a real violation.
+#   - errexit-safe: GitHub Actions runs bash with -e; rg's exit is captured with
+#     `|| rc=$?` so a no-match (exit 1) does not abort the job, while an error
+#     (exit >= 2) still fails closed. `--hidden` retained (dotfiles are scanned).
 #
 # Installed by the szl-alignment engine; keep in sync with
 # alignment/templates/workflows/forbidden-domain.yml.
@@ -36,7 +37,7 @@ jobs:
         shell: bash
         run: |
           set -uo pipefail
-          files="$(rg -P '(?<!-)a11oy\.com' --glob '!.git' -l -- .)"; rc=$?
+          rc=0; files="$(rg -P '(?<!-)a11oy\.com' --hidden --glob '!.git' -l -- .)" || rc=$?
           if [ "$rc" -ge 2 ]; then
             echo "::error::forbidden-domain scanner failed (rg exit $rc) — failing closed."
             exit 1
@@ -45,12 +46,12 @@ jobs:
           if [ -n "$files" ]; then
             while IFS= read -r f; do
               [ -z "$f" ] && continue
-              lines="$(rg -nI -P '(?<!-)a11oy\.com' -- "$f")"; lrc=$?
+              lrc=0; lines="$(rg -nI -P '(?<!-)a11oy\.com' --hidden -- "$f")" || lrc=$?
               if [ "$lrc" -ge 2 ]; then
                 echo "::error::forbidden-domain scanner failed on $f (rg exit $lrc) — failing closed."
                 exit 1
               fi
-              nonexempt="$(printf '%s\n' "$lines" | rg -v -i 'never|forbidden|not in|assertNotIn|does not appear|is not a surface|blocklist')"; vrc=$?
+              vrc=0; nonexempt="$(printf '%s\n' "$lines" | rg -v -i 'never|forbidden|not in|assertNotIn|does not appear|is not a surface|blocklist')" || vrc=$?
               if [ "$vrc" -ge 2 ]; then
                 echo "::error::forbidden-domain exemption filter failed on $f — failing closed."
                 exit 1
