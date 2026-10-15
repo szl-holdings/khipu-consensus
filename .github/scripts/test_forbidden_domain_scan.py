@@ -10,9 +10,11 @@ Requires ripgrep on PATH (the workflow provisions it).
 """
 import os
 import shutil
+import subprocess
 import sys
 import tempfile
 import unittest
+import unittest.mock
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import forbidden_domain_scan as fds
@@ -25,15 +27,18 @@ BAD = "a11oy" ".com"
 class Base(unittest.TestCase):
     def setUp(self):
         self.dir = tempfile.mkdtemp(prefix="fdg_")
+        subprocess.run(["git", "init", "-q", self.dir], check=True)
 
     def tearDown(self):
         shutil.rmtree(self.dir, ignore_errors=True)
 
-    def write(self, relpath, content):
+    def write(self, relpath, content, *, tracked=True):
         p = os.path.join(self.dir, relpath)
         os.makedirs(os.path.dirname(p), exist_ok=True)
         with open(p, "w") as f:
             f.write(content)
+        if tracked:
+            subprocess.run(["git", "-C", self.dir, "add", "-f", "--", relpath], check=True)
         return p
 
     def violations(self):
@@ -92,6 +97,20 @@ class TestNewlineFilename(Base):
 
 
 class TestFailClosed(Base):
+    def test_git_timeout_fails_closed_with_a_bounded_deadline(self):
+        with unittest.mock.patch.object(fds.subprocess, "run", side_effect=subprocess.TimeoutExpired("git", 30)) as run:
+            with self.assertRaises(SystemExit) as cm:
+                self.violations()
+        self.assertEqual(cm.exception.code, 2)
+        self.assertTrue(0 < run.call_args.kwargs["timeout"] <= 60)
+
+    def test_ripgrep_timeout_fails_closed_with_a_bounded_deadline(self):
+        with unittest.mock.patch.object(fds.subprocess, "run", side_effect=subprocess.TimeoutExpired("rg", 30)) as run:
+            with self.assertRaises(SystemExit) as cm:
+                fds.rg(["--version"])
+        self.assertEqual(cm.exception.code, 2)
+        self.assertTrue(0 < run.call_args.kwargs["timeout"] <= 60)
+
     def test_scanner_error_fails_closed(self):
         with self.assertRaises(SystemExit) as cm:
             fds.scan_root(os.path.join(self.dir, "no-such-path"))
@@ -106,6 +125,67 @@ class TestFailClosed(Base):
             self.assertEqual(cm.exception.code, 2)
         finally:
             fds.RG = original
+
+
+class TestTrackedSourceScope(Base):
+    def test_binary_source_with_token_after_nul_is_not_silently_skipped(self):
+        path = self.write("data.bin", "")
+        for padding in (b"", b"\n", b"X" * 200000 + b"\n"):
+            with self.subTest(padding_bytes=len(padding)):
+                with open(path, "wb") as stream:
+                    stream.write(b"prefix\0" + padding + b"https://" + BAD.encode() + b"\n")
+                self.assertEqual(len(self.violations()), 1)
+
+    def test_dash_filename_is_not_stdin(self):
+        self.write("-", f"endpoint = 'https://{BAD}'\n")
+        self.assertEqual(len(self.violations()), 1)
+
+    def test_gitignored_tracked_source_cannot_escape(self):
+        self.write(".gitignore", "src/\n")
+        self.write("src/app.py", f"endpoint = 'https://{BAD}'\n")
+        self.assertEqual(len(self.violations()), 1)
+
+    def test_ripgrep_ignore_cannot_hide_tracked_hidden_source(self):
+        self.write(".ignore", ".github/\n")
+        self.write(".github/config.txt", f"endpoint = 'https://{BAD}'\n")
+        self.assertEqual(len(self.violations()), 1)
+
+    def test_ripgrep_configuration_cannot_hide_tracked_source(self):
+        config = self.write("local-rg-config", "--glob=!*.py\n", tracked=False)
+        self.write("app.py", f"endpoint = 'https://{BAD}'\n")
+        with unittest.mock.patch.dict(os.environ, {"RIPGREP_CONFIG_PATH": config}):
+            self.assertEqual(len(self.violations()), 1)
+
+    def test_untracked_generated_content_is_outside_scope(self):
+        self.write("build/generated.txt", f"endpoint = 'https://{BAD}'\n", tracked=False)
+        self.assertEqual(self.violations(), [])
+
+    def test_deleted_tracked_source_fails_closed(self):
+        path = self.write("app.py", "clean\n")
+        os.unlink(path)
+        with self.assertRaises(SystemExit) as cm:
+            self.violations()
+        self.assertEqual(cm.exception.code, 2)
+
+    def test_regular_tracked_source_replaced_by_symlink_fails_closed(self):
+        path = self.write("app.py", "clean\n")
+        target = self.write("target", "clean\n", tracked=False)
+        os.unlink(path)
+        os.symlink(target, path)
+        with self.assertRaises(SystemExit) as cm:
+            self.violations()
+        self.assertEqual(cm.exception.code, 2)
+
+    def test_tracked_symlink_is_not_followed(self):
+        target = self.write("untracked-target", f"endpoint = 'https://{BAD}'\n", tracked=False)
+        os.symlink(target, os.path.join(self.dir, "source-link"))
+        subprocess.run(["git", "-C", self.dir, "add", "--", "source-link"], check=True)
+        self.assertEqual(self.violations(), [])
+
+    def test_multiple_batches_keep_every_tracked_match(self):
+        for index in range(130):
+            self.write(f"sources/{index}.txt", f"endpoint = 'https://{BAD}'\n")
+        self.assertEqual(len(self.violations()), 130)
 
 
 if __name__ == "__main__":
