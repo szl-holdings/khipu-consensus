@@ -1,29 +1,22 @@
 # Release-blocking CRITICAL gate for the szl-holdings estate.
 #
-# Rule (validated on the live org): a line matching
-#     (?<!-)a11oy\.com
-# is a violation UNLESS the matched CONTENT line also matches
-#   /(never|forbidden|not in|assertNotIn|does not appear|is not a surface|blocklist)/i
-# — guard assertions, blocklists, and doctrine notes are legitimate. Canonical
-# surfaces are a-11-oy.com (product) and a11oy.net (proof).
+# Rule (validated on the live org): a line matching  (?<!-)a11oy\.com  is a violation
+# UNLESS the same line is a prohibition/guard context (never|forbidden|not in|
+# assertNotIn|does not appear|is not a surface|blocklist). Canonical surfaces are
+# a-11-oy.com (product) and a11oy.net (proof).
 #
-# Fail-closed hardening (2026-10-15):
-#   - FAILS the gate on any ripgrep error (exit >= 2); never passes silently.
-#   - exemptions are judged on the matched CONTENT only (-I strips the path), so an
-#     exemption word in a FILE PATH cannot hide a real violation.
-#   - errexit-safe: GitHub Actions runs bash with -e; rg's exit is captured with
-#     `|| rc=$?` so a no-match (exit 1) does not abort the job, while an error
-#     (exit >= 2) still fails closed. `--hidden` retained (dotfiles are scanned).
-#
-# Installed by the szl-alignment engine; keep in sync with
+# The scanner logic and its regression tests live in .github/scripts/ as a single
+# unit-tested source (forbidden_domain_scan.py + test_forbidden_domain_scan.py); this
+# workflow provisions ripgrep and runs it. Keep both in sync with
 # alignment/templates/workflows/forbidden-domain.yml.
 name: forbidden-domain
 
 on:
-  pull_request: null
+  pull_request:
   merge_group:
     types:
-    - checks_requested
+      - checks_requested
+
 permissions:
   contents: read
 
@@ -33,38 +26,30 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      - name: Scan for forbidden domain references
+      - name: Provision ripgrep (fail closed if unavailable)
         shell: bash
         run: |
-          set -uo pipefail
-          rc=0; files="$(rg -P '(?<!-)a11oy\.com' --hidden --glob '!.git' -l -- .)" || rc=$?
-          if [ "$rc" -ge 2 ]; then
-            echo "::error::forbidden-domain scanner failed (rg exit $rc) — failing closed."
+          set -euo pipefail
+          if command -v rg >/dev/null 2>&1; then
+            echo "ripgrep already present: $(rg --version | head -1)"
+            exit 0
+          fi
+          sudo apt-get update
+          sudo apt-get install -y ripgrep
+          command -v rg >/dev/null 2>&1 || {
+            echo "::error::ripgrep could not be provisioned; gate fails closed."
             exit 1
-          fi
-          fail=0
-          if [ -n "$files" ]; then
-            while IFS= read -r f; do
-              [ -z "$f" ] && continue
-              lrc=0; lines="$(rg -nI -P '(?<!-)a11oy\.com' --hidden -- "$f")" || lrc=$?
-              if [ "$lrc" -ge 2 ]; then
-                echo "::error::forbidden-domain scanner failed on $f (rg exit $lrc) — failing closed."
-                exit 1
-              fi
-              vrc=0; nonexempt="$(printf '%s\n' "$lines" | rg -v -i 'never|forbidden|not in|assertNotIn|does not appear|is not a surface|blocklist')" || vrc=$?
-              if [ "$vrc" -ge 2 ]; then
-                echo "::error::forbidden-domain exemption filter failed on $f — failing closed."
-                exit 1
-              fi
-              if [ -n "$nonexempt" ]; then
-                while IFS= read -r l; do [ -n "$l" ] && echo "::error::$f:$l"; done <<< "$nonexempt"
-                fail=1
-              fi
-            done <<< "$files"
-          fi
-          if [ "$fail" = 1 ]; then
-            echo "::error::Forbidden domain references found (release-blocking CRITICAL)."
-            echo "::error::Replace with a-11-oy.com or add a guard word on the same content line."
-            exit 1
-          fi
-          echo "OK: no forbidden domain references outside guard contexts."
+          }
+          echo "ripgrep installed: $(rg --version | head -1)"
+
+      - name: Run forbidden-domain scanner (release-blocking CRITICAL)
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 .github/scripts/forbidden_domain_scan.py .
+
+      - name: Self-test the scanner (regression suite)
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m unittest discover -s .github/scripts -p 'test_forbidden_domain_scan.py' -v
