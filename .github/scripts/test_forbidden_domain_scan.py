@@ -69,6 +69,22 @@ class TestViolations(Base):
         self.assertTrue(v[0][0].endswith(b"src/app.js"))
 
 
+class TestCaseVariantHost(Base):
+    """DNS names ignore case, so a case-variant host is the same prohibited host."""
+
+    def test_upper_case_host_in_live_call_is_flagged(self):
+        self.write("app.js", f'fetch("https://{BAD.upper()}/x")\n')
+        self.assertEqual(len(self.violations()), 1)
+
+    def test_mixed_case_host_is_flagged(self):
+        self.write("app.py", f'requests.get("https://{BAD.title()}")\n')
+        self.assertEqual(len(self.violations()), 1)
+
+    def test_case_variant_host_in_guarded_prose_is_exempt(self):
+        self.write("README.md", f"Never {BAD.upper()}.\n")
+        self.assertEqual(self.violations(), [])
+
+
 class TestExemptionIsContentOnly(Base):
     def test_guard_word_on_same_line_is_exempt(self):
         self.write("src/guard.js", f"// {BAD} must never appear as a surface\n")

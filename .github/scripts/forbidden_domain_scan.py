@@ -3,7 +3,7 @@
 
 Rule: every occurrence of
 
-    (?<!-)a11oy\\.com
+    (?<!-)a11oy\\.com          (matched case-insensitively: DNS names ignore case)
 
 in a tracked source is a violation UNLESS that occurrence itself sits in an explicit
 prohibition/guard context. Canonical surfaces are a-11-oy.com (product) and a11oy.net
@@ -53,7 +53,7 @@ EXEMPTION = r"never|forbidden|not in|assertNotIn|does not appear|is not a surfac
 # A guard phrase only counts standing alone: no adjacent letter, digit, "_" or "$",
 # so an identifier such as forbidden_url or neverHost never supplies one.
 GUARD = r"(?<![A-Za-z0-9_$])(?:" + EXEMPTION + r")(?![A-Za-z0-9_$])"
-PROHIBITED_HOST = re.compile(DOMAIN.encode())
+PROHIBITED_HOST = re.compile(DOMAIN.encode(), re.IGNORECASE)   # DNS names ignore case
 RG = "rg"   # module-level so tests can point it at a missing binary (fail-closed path)
 COMMAND_TIMEOUT_SECONDS = 30
 
@@ -174,7 +174,7 @@ def collect_matches(root="."):
     def collect(values):
         # A tracked file named '-' must never be interpreted as stdin.
         arguments = [b"./" + value for value in values]
-        scan = rg(["--json", "--hidden", "--no-ignore", "-P", DOMAIN,
+        scan = rg(["--json", "--hidden", "--no-ignore", "--ignore-case", "-P", DOMAIN,
                    "--glob", "!.git", "--", *arguments], cwd=directory)
         return batch_matches(scan, set(arguments))
 

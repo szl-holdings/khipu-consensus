@@ -1,6 +1,6 @@
 # Release-blocking CRITICAL gate for the szl-holdings estate.
 #
-# Rule: every occurrence of  (?<!-)a11oy\.com  in a tracked source is a violation
+# Rule: every occurrence of  (?<!-)a11oy\.com  (any letter case) in a tracked source is a violation
 # UNLESS that occurrence itself sits in an explicit prohibition/guard shape on its own
 # line: bare-host prose with a standalone guard phrase (never|forbidden|not in|
 # assertNotIn|does not appear|is not a surface|blocklists?), literal data bound to a
