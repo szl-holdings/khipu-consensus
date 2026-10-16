@@ -80,6 +80,46 @@ class TestExemptionIsContentOnly(Base):
         self.assertIn(b"blocklist/app.js", v[0][0])
 
 
+class TestGuardWordInsideExecutableReference(Base):
+    """A guard word that only appears inside the prohibited URL or value is not a
+    guard context (exact-head HOLD on khipu-consensus#45, comment 6204962226)."""
+
+    def assert_flagged(self, source):
+        self.write("src/live.js", source)
+        self.assertEqual(len(self.violations()), 1, source)
+
+    def assert_exempt(self, source):
+        self.write("docs/guard.md", source)
+        self.assertEqual(self.violations(), [], source)
+
+    def test_guard_word_as_url_path_segment_is_flagged(self):
+        self.assert_flagged(f'fetch("https://{BAD}/blocklist")\n')
+
+    def test_guard_word_as_query_value_is_flagged(self):
+        self.assert_flagged(f'url = "https://{BAD}/?mode=forbidden"\n')
+
+    def test_guard_word_as_subdomain_value_is_flagged(self):
+        self.assert_flagged(f'host = "never.{BAD}"\n')
+
+    def test_guard_word_inside_markdown_link_target_is_flagged(self):
+        self.assert_flagged(f"[docs](https://{BAD}/blocklist)\n")
+
+    def test_guard_substring_inside_identifier_is_flagged(self):
+        self.assert_flagged(f'forbiddenFruit = fetch("https://{BAD}")\n')
+
+    def test_non_guard_word_containing_guard_text_is_flagged(self):
+        self.assert_flagged(f"nevertheless we call https://{BAD} here\n")
+
+    def test_blocklist_declaration_outside_the_reference_is_exempt(self):
+        self.assert_exempt(f'BLOCKLIST = ["https://{BAD}"]\n')
+
+    def test_assert_not_in_guard_is_exempt(self):
+        self.assert_exempt(f'self.assertNotIn("{BAD}", surfaces)\n')
+
+    def test_prose_prohibition_is_exempt(self):
+        self.assert_exempt(f"{BAD} is not a surface; it appears only in blocklists.\n")
+
+
 class TestHiddenScope(Base):
     def test_hidden_file_is_scanned(self):
         self.write(".github/config.txt", f"endpoint = https://{BAD}\n")

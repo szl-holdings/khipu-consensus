@@ -5,9 +5,12 @@ Rule (validated on the live org): a line matching
 
     (?<!-)a11oy\\.com
 
-is a violation UNLESS the same line is a prohibition/guard context, i.e. it also
-matches /(never|forbidden|not in|assertNotIn|does not appear|is not a surface|
-blocklist)/i — guard assertions, blocklists and doctrine notes are legitimate.
+is a violation UNLESS the same line is a prohibition/guard context: outside the
+prohibited reference itself, the line contains a standalone guard word from
+/(never|forbidden|not in|assertNotIn|does not appear|is not a surface|
+blocklists?)/i — guard assertions, blocklists and doctrine notes are legitimate.
+A guard word that only appears inside the prohibited URL or value (a path
+segment, query value, subdomain or identifier) does not exempt it.
 Canonical surfaces are a-11-oy.com (product) and a11oy.net (proof).
 
 This is the independently reviewed structured candidate (round 2 review, candidate
@@ -29,12 +32,17 @@ import base64
 import json
 import os
 from pathlib import Path
+import re
 import stat
 import subprocess
 import sys
 
 DOMAIN = r"(?<!-)a11oy\.com"
-EXEMPTION = r"never|forbidden|not in|assertNotIn|does not appear|is not a surface|blocklist"
+EXEMPTION = r"never|forbidden|not in|assertNotIn|does not appear|is not a surface|blocklists?"
+# A guard word only counts as a standalone word (no adjacent letter or digit).
+GUARD = r"(?<![A-Za-z0-9])(?:" + EXEMPTION + r")(?![A-Za-z0-9])"
+PROHIBITED_HOST = re.compile(DOMAIN.encode())
+REFERENCE_TOKEN = re.compile(rb"[^\s\"'`()\[\]{}<>,;]+")
 RG = "rg"   # module-level so tests can point it at a missing binary (fail-closed path)
 COMMAND_TIMEOUT_SECONDS = 30
 
@@ -170,14 +178,36 @@ def collect_matches(root="."):
     return matches
 
 
+def outside_forbidden_references(line: bytes) -> bytes:
+    """Blank every token of the source line that contains the prohibited host.
+
+    A token is a run of bytes not separated by whitespace, quotes, backticks,
+    brackets, braces, angle brackets, commas or semicolons, so a URL's scheme,
+    host, port, path, query and fragment travel together. A guard word that occurs
+    only inside the prohibited reference itself — a /blocklist path segment, a
+    never.<host> subdomain or a ?mode=forbidden query value on the prohibited host —
+    is therefore removed before the guard check and can never exempt that same
+    reference."""
+    return REFERENCE_TOKEN.sub(
+        lambda token: b" " * len(token.group(0))
+        if PROHIBITED_HOST.search(token.group(0)) else token.group(0),
+        line,
+    )
+
+
 def filter_violations(matches):
-    """Keep only matches whose SOURCE LINE is not a guard/prohibition context. The
-    exemption runs over the content bytes only (same rg engine + case folding); a
-    filename can never grant an exemption."""
+    """Keep only matches whose SOURCE LINE is not a guard/prohibition context.
+
+    The exemption runs over source content only (a filename can never grant it),
+    and only over the part of the line OUTSIDE the prohibited reference. Guard
+    words must stand alone as words, so an identifier or path segment that merely
+    contains one (forbiddenFruit, /blocklist) is not a guard context. This is a
+    lexical gate: a line that deliberately splits the host across string pieces, or
+    that mixes a genuine guard with a separate live call, is outside what it can judge."""
     violations = []
     for path, number, line in matches:
-        guard = rg(["-i", "--", EXEMPTION], source=line)
-        if guard.returncode == 1:   # exemption word NOT present on the content line
+        guard = rg(["-P", "-i", "--", GUARD], source=outside_forbidden_references(line))
+        if guard.returncode == 1:   # no standalone guard word outside the reference
             violations.append((path, number, line))
     return violations
 
