@@ -1,0 +1,58 @@
+# Release-blocking CRITICAL gate for the szl-holdings estate.
+#
+# Rule: every occurrence of  (?<!-)a11oy\.com  (any letter case) in a tracked source is a violation
+# UNLESS that occurrence itself sits in an explicit prohibition/guard shape on its own
+# line: bare-host prose with a standalone guard phrase (never|forbidden|not in|
+# assertNotIn|does not appear|is not a surface|blocklists?), literal data bound to a
+# guard-named key or constant outside any call, or an absence assertion. A guard word
+# elsewhere on the line, in an identifier or in another argument covers nothing.
+# Canonical surfaces are a-11-oy.com (product) and a11oy.net (proof).
+#
+# The scanner logic and its regression tests live in .github/scripts/ as a single
+# unit-tested source (forbidden_domain_scan.py + test_forbidden_domain_scan.py); this
+# workflow provisions ripgrep and runs it. Keep both in sync with
+# alignment/templates/workflows/forbidden-domain.yml.
+name: forbidden-domain
+
+on:
+  pull_request:
+  merge_group:
+    types:
+      - checks_requested
+
+permissions:
+  contents: read
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Provision ripgrep (fail closed if unavailable)
+        shell: bash
+        run: |
+          set -euo pipefail
+          if command -v rg >/dev/null 2>&1; then
+            echo "ripgrep already present: $(rg --version | head -1)"
+            exit 0
+          fi
+          sudo apt-get update
+          sudo apt-get install -y ripgrep
+          command -v rg >/dev/null 2>&1 || {
+            echo "::error::ripgrep could not be provisioned; gate fails closed."
+            exit 1
+          }
+          echo "ripgrep installed: $(rg --version | head -1)"
+
+      - name: Run forbidden-domain scanner (release-blocking CRITICAL)
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 .github/scripts/forbidden_domain_scan.py .
+
+      - name: Self-test the scanner (regression suite)
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m unittest discover -s .github/scripts -p 'test_forbidden_domain_scan.py' -v
