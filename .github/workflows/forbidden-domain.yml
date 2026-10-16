@@ -1,9 +1,12 @@
 # Release-blocking CRITICAL gate for the szl-holdings estate.
 #
-# Rule (validated on the live org): a line matching  (?<!-)a11oy\.com  is a violation
-# UNLESS the same line is a prohibition/guard context (never|forbidden|not in|
-# assertNotIn|does not appear|is not a surface|blocklist). Canonical surfaces are
-# a-11-oy.com (product) and a11oy.net (proof).
+# Rule: every occurrence of  (?<!-)a11oy\.com  in a tracked source is a violation
+# UNLESS that occurrence itself sits in an explicit prohibition/guard shape on its own
+# line: bare-host prose with a standalone guard phrase (never|forbidden|not in|
+# assertNotIn|does not appear|is not a surface|blocklists?), literal data bound to a
+# guard-named key or constant outside any call, or an absence assertion. A guard word
+# elsewhere on the line, in an identifier or in another argument covers nothing.
+# Canonical surfaces are a-11-oy.com (product) and a11oy.net (proof).
 #
 # The scanner logic and its regression tests live in .github/scripts/ as a single
 # unit-tested source (forbidden_domain_scan.py + test_forbidden_domain_scan.py); this
