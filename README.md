@@ -128,6 +128,19 @@ cosign verify-blob --key gate-cosign.pub --signature sig.b64 --insecure-ignore-t
 
 All three verify the **same** deterministic vectors in [`testdata/vectors.json`](testdata/vectors.json).
 
+The raw tally requires positive integer quorum counts with
+`1 <= threshold <= n`. Invalid counts return `rejected` with zero counted
+signatures and an empty check list before signature verification. Python and
+TypeScript also reject Boolean, fractional, non-finite and non-numeric counts;
+Go's count parameters are statically typed integers. Shared boundary cases live
+in [`testdata/quorum-counts.json`](testdata/quorum-counts.json).
+
+The Python coordinator raises `ValueError` for invalid quorum counts before
+requesting any witness signatures. Registry loading preserves the configured
+threshold type rather than coercing strings, Booleans or fractions to integers.
+These checks validate count shape only: the caller must still supply trusted
+witness identities and policy. They do not establish BFT safety or liveness.
+
 ### Quick start (Python)
 
 ```python

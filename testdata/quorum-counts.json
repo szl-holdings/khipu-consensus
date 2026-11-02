@@ -1,0 +1,12 @@
+{
+  "description": "Quorum count admission; signatures are reused from the public deterministic vectors",
+  "cases": [
+    {"name": "zero threshold empty signatures", "threshold": 0, "n": 4, "signatures": "empty", "decision": "rejected", "count": 0},
+    {"name": "negative threshold", "threshold": -1, "n": 4, "signatures": "all", "decision": "rejected", "count": 0},
+    {"name": "zero witness count", "threshold": 1, "n": 0, "signatures": "all", "decision": "rejected", "count": 0},
+    {"name": "negative witness count", "threshold": 1, "n": -1, "signatures": "all", "decision": "rejected", "count": 0},
+    {"name": "threshold exceeds witness count", "threshold": 5, "n": 4, "signatures": "all", "decision": "rejected", "count": 0},
+    {"name": "valid quorum still counts", "threshold": 3, "n": 4, "signatures": "all", "decision": "canonical", "count": 4},
+    {"name": "valid quorum empty signatures", "threshold": 3, "n": 4, "signatures": "empty", "decision": "rejected", "count": 0}
+  ]
+}

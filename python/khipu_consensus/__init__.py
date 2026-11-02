@@ -146,6 +146,10 @@ def verify_verdict(v: OrganVerdict, public_key_pem: str, action_hash: str) -> Or
         return OrganCheck(v.organ, v.keyid, False, None, False, False, f"{type(e).__name__}: {e}")
 
 
+def _valid_quorum_counts(threshold: int, n: int) -> bool:
+    return type(threshold) is int and type(n) is int and 1 <= threshold <= n
+
+
 def tally(action_hash: str, verdicts: list, pubkeys: dict,
           threshold: int = 3, n: int = 4) -> ConsensusResult:
     """Count valid + allow signatures over `action_hash`; apply the BFT threshold.
@@ -160,7 +164,11 @@ def tally(action_hash: str, verdicts: list, pubkeys: dict,
 
     verdicts: list of dict|OrganVerdict|None (None = abstain/timeout).
     pubkeys : {organ: PEM}.
+    Invalid quorum counts reject before verification: n and threshold must be
+    positive integers (not booleans), with threshold <= n. They are not coerced.
     """
+    if not _valid_quorum_counts(threshold, n):
+        return ConsensusResult(action_hash, threshold, n, 0, "rejected", [])
     checks = []
     counted: set = set()
     count = 0
