@@ -92,3 +92,15 @@ randomized fuzz-sweep counts, the finding, and the honesty block (Conjecture 2/3
 proof-deferred). With the optional `[spine]` extra installed it can be folded
 onto a canonical `szl-receipt` via `emit_adversarial_receipt(report, priv)`
 (keyless ⇒ UNSIGNED-honest — a signature is never faked).
+
+## Collusion simulation counts
+
+The separate `khipu_consensus.collusion` harness uses labeled HMAC simulation
+keys, not the real verifier above. `run_campaign(colluders, rounds=...)` accepts
+an integer colluder count from 0 through 4 and a positive integer round count.
+`full_lane(rounds=...)` applies the same round requirement to every campaign.
+Booleans, fractions, non-finite numbers, strings and missing values are rejected
+with `ValueError` before witness creation; zero or negative rounds cannot
+produce a `MEASURED` result or a successful verdict from an empty experiment.
+Valid campaigns retain their existing results and deterministic digest. These
+simulation results do not establish BFT safety or liveness proofs.

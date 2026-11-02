@@ -41,7 +41,12 @@ def run_round(witnesses, committed_payload, tampered):
     return {"quorum_reached": quorum_reached, "signers": sorted(sigs), "tampered": tampered, "tamper_detected": tamper_detected, "outcome": outcome, "presented_hash": presented_hash, "committed_hash": committed_hash}
 
 def run_campaign(colluders, rounds=200, seed=1337):
-    if colluders < 0 or colluders > 4: raise ValueError("colluders must be 0..4")
+    # Counts describe actual simulated trials/witnesses, never truthy flags or
+    # rounded/coerced values. Validate before creating keys or running a round.
+    if type(colluders) is not int or not 0 <= colluders <= 4:
+        raise ValueError("colluders must be an integer in 0..4")
+    if type(rounds) is not int or rounds < 1:
+        raise ValueError("rounds must be a positive integer")
     witnesses = [Witness(i, colluder=(i < colluders)) for i in range(4)]
     payload = {"proposal": "interdiction", "amount": 1, "nonce": seed}
     results = [run_round(witnesses, payload, tampered=(colluders > 0)) for _ in range(rounds)]
