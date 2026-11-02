@@ -219,6 +219,12 @@ func VerifyVerdict(v OrganVerdict, publicKeyPem, actionHash string) OrganCheck {
 // organ already counted is recorded but does not inflate the tally. A nil entry
 // in verdicts models an abstaining/timed-out witness. Mirrors python/ + typescript/.
 func Tally(actionHash string, verdicts []*OrganVerdict, pubkeys map[string]string, threshold, n int) ConsensusResult {
+	if threshold < 1 || threshold > n {
+		return ConsensusResult{
+			ActionHash: actionHash, Threshold: threshold, N: n, ConsensusCount: 0,
+			Decision: "rejected", KhipuConsensus: fmt.Sprintf("0-of-%d", n), Checks: []OrganCheck{},
+		}
+	}
 	checks := make([]OrganCheck, 0, len(verdicts))
 	counted := make(map[string]bool)
 	count := 0

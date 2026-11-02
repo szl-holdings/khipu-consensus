@@ -27,3 +27,24 @@ if (failures > 0) {
   process.exit(1);
 }
 console.log("ALL TYPESCRIPT VECTOR TESTS PASSED");
+
+// Count admission uses the same integer vectors as the Python and Go ports.
+const quorum = JSON.parse(readFileSync(join(__dirname, '../../testdata/quorum-counts.json'), 'utf-8'));
+const source = JSON.parse(readFileSync(VEC, 'utf-8'));
+for (const c of quorum.cases) {
+  const result = tally(source.action_hash, c.signatures === 'all' ? source.cases[0].signatures : [], source.pubkeys, c.threshold, c.n);
+  if (result.decision !== c.decision || result.consensusCount !== c.count || (c.signatures === 'all' && c.decision === 'rejected' && result.checks.length !== 0)) {
+    throw new Error(`quorum count vector failed: ${c.name}`);
+  }
+}
+for (const value of [true, false, 1.5, NaN, Infinity, '1', null]) {
+  for (const field of ['threshold', 'n']) {
+    const threshold = field === 'threshold' ? value : 3;
+    const n = field === 'n' ? value : 4;
+    const result = tally(source.action_hash, source.cases[0].signatures, source.pubkeys, threshold as number, n as number);
+    if (result.decision !== 'rejected' || result.consensusCount !== 0 || result.checks.length !== 0) {
+      throw new Error(`invalid ${field} accepted: ${String(value)}`);
+    }
+  }
+}
+console.log('ALL QUORUM COUNT TESTS PASSED');

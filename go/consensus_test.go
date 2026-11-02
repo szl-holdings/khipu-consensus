@@ -52,3 +52,46 @@ func checkVectors(t *testing.T, name string) {
 		}
 	}
 }
+
+func TestQuorumCounts(t *testing.T) {
+	raw, err := os.ReadFile(filepath.Join("..", "testdata", "vectors.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var source vectorFile
+	if err := json.Unmarshal(raw, &source); err != nil {
+		t.Fatal(err)
+	}
+	raw, err = os.ReadFile(filepath.Join("..", "testdata", "quorum-counts.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var fixtures struct {
+		Cases []struct {
+			Name       string `json:"name"`
+			Threshold  int    `json:"threshold"`
+			N          int    `json:"n"`
+			Signatures string `json:"signatures"`
+			Decision   string `json:"decision"`
+			Count      int    `json:"count"`
+		} `json:"cases"`
+	}
+	if err := json.Unmarshal(raw, &fixtures); err != nil {
+		t.Fatal(err)
+	}
+	for _, c := range fixtures.Cases {
+		t.Run(c.Name, func(t *testing.T) {
+			var signatures []*OrganVerdict
+			if c.Signatures == "all" {
+				signatures = source.Cases[0].Signatures
+			}
+			result := Tally(source.ActionHash, signatures, source.Pubkeys, c.Threshold, c.N)
+			if result.Decision != c.Decision || result.ConsensusCount != c.Count {
+				t.Fatalf("got %s count %d, want %s count %d", result.Decision, result.ConsensusCount, c.Decision, c.Count)
+			}
+			if c.Signatures == "all" && c.Decision == "rejected" && len(result.Checks) != 0 {
+				t.Fatal("invalid quorum performed signature checks")
+			}
+		})
+	}
+}

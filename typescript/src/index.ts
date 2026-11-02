@@ -137,6 +137,9 @@ export function tally(
   actionHash: string, verdicts: (OrganVerdict | null)[],
   pubkeys: Record<string, string>, threshold = 3, n = 4,
 ): ConsensusResult {
+  if (!Number.isInteger(threshold) || !Number.isInteger(n) || threshold < 1 || threshold > n) {
+    return { actionHash, threshold, n, consensusCount: 0, decision: "rejected", khipuConsensus: `0-of-${n}`, checks: [] };
+  }
   const checks: OrganCheck[] = [];
   const counted = new Set<string>();
   let count = 0;

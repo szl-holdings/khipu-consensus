@@ -7,11 +7,13 @@ through the BFT tally — no mocks, no fakes.
 """
 import hashlib
 import json
+from pathlib import Path
+from unittest.mock import patch
 
 import pytest
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import ec
-from khipu_consensus import canonical_json
+from khipu_consensus import canonical_json, tally
 from khipu_consensus.cli import main as cli_main
 from khipu_consensus.sdk import KhipuWitnessClient
 from khipu_consensus.witness import Witness, WitnessRegistry, attest, verify_receipt
@@ -271,3 +273,52 @@ def test_cli_rejects_missing_or_malformed_external_policy(tmp_path, capsys):
         }), encoding="utf-8")
         assert cli_main([str(receipt_path), str(policy_path)]) == 2
         assert "threshold must be an integer" in capsys.readouterr().err
+
+
+# Invalid quorum counts must fail before verification or coordinator signing.
+ROOT = Path(__file__).resolve().parents[2]
+VECTORS = json.loads((ROOT / 'testdata/vectors.json').read_text())
+CASES = json.loads((ROOT / 'testdata/quorum-counts.json').read_text())['cases']
+
+
+@pytest.mark.parametrize('case', CASES, ids=lambda case: case['name'])
+def test_shared_quorum_count_vectors(case):
+    signatures = VECTORS['cases'][0]['signatures'] if case['signatures'] == 'all' else []
+    result = tally(VECTORS['action_hash'], signatures, VECTORS['pubkeys'], case['threshold'], case['n'])
+    assert (result.decision, result.consensus_count) == (case['decision'], case['count'])
+    if case['decision'] == 'rejected' and case['signatures'] == 'all':
+        assert result.checks == []
+
+
+@pytest.mark.parametrize('value', [True, False, 1.5, float('nan'), float('inf'), '1', None])
+@pytest.mark.parametrize('field', ['threshold', 'n'])
+def test_noninteger_counts_are_rejected_before_signature_checks(field, value):
+    config = {'threshold': 3, 'n': 4, field: value}
+    with patch('khipu_consensus.verify_verdict') as verify:
+        result = tally(VECTORS['action_hash'], VECTORS['cases'][0]['signatures'], VECTORS['pubkeys'], **config)
+        assert result.decision == 'rejected'
+        assert result.consensus_count == 0
+        assert result.checks == []
+        verify.assert_not_called()
+
+
+@pytest.mark.parametrize('threshold', [0, -1, 5, True, 1.5, float('nan'), '1'])
+def test_coordinator_rejects_invalid_policy_before_signing(threshold):
+    registry = WitnessRegistry([Witness(organ=str(i), public_key_pem='unused') for i in range(4)], threshold=threshold)
+    with patch.object(Witness, 'sign') as sign:
+        with pytest.raises(ValueError, match='quorum counts'):
+            attest('action', registry)
+        sign.assert_not_called()
+
+
+def test_empty_registry_cannot_attest():
+    with pytest.raises(ValueError, match='quorum counts'):
+        attest('action', WitnessRegistry())
+
+
+@pytest.mark.parametrize('threshold', [True, 1.5, '1'])
+def test_registry_loader_preserves_policy_types_for_admission(threshold):
+    registry = WitnessRegistry.from_dict({'threshold': threshold, 'witnesses': [{'organ': 'w'}]})
+    assert type(registry.threshold) is type(threshold)
+    with pytest.raises(ValueError, match='quorum counts'):
+        attest('action', registry)

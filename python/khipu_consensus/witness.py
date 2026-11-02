@@ -136,7 +136,7 @@ class WitnessRegistry:
             # a runtime file. The committed example registry has NONE (UNSIGNED-honest).
             private_key_pem=x.get("private_key_pem"),
         ) for x in d.get("witnesses", [])]
-        return WitnessRegistry(ws, threshold=int(d.get("threshold", 3)))
+        return WitnessRegistry(ws, threshold=d.get("threshold", 3))
 
 
 @dataclass
@@ -200,6 +200,10 @@ def attest(action_hash: str, registry: WitnessRegistry,
     `verdicts`: optional {organ: "allow"|"block"} to drive a specific witness's vote
     (used for demos/tests; in production each witness decides independently).
     """
+    from . import _valid_quorum_counts
+
+    if not _valid_quorum_counts(registry.threshold, registry.n):
+        raise ValueError("quorum counts must be integers with 1 <= threshold <= n")
     verdicts = verdicts or {}
     collected = []
     for w in registry.all():
