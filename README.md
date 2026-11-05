@@ -32,16 +32,13 @@ It removes the single point of failure in AI governance: no one component (and n
 
 ## ▶️ Live demo
 
-This is a **public** repository. Interactive BFT 3-of-4 witnessed-consensus demo
-(real in-browser SHA-256; an honest quorum failure renders a broken lattice):
-**[`SZLHOLDINGS/khipu-constellation`](https://huggingface.co/spaces/SZLHOLDINGS/khipu-constellation)**
-— the live 3D BFT mesh visualization. See also
+This is a **public** repository. The interactive BFT 3-of-4 witnessed-consensus
+demo Space (formerly `SZLHOLDINGS/khipu-constellation`, a 3D BFT mesh
+visualization with real in-browser SHA-256) has been **REMOVED** from the Hub —
+it is not private, it no longer exists (verified via HF API 2026-11-04 with an
+org-admin token: HTTP 404, identical to a never-created name; absent from the
+`SZLHOLDINGS` spaces listing). See
 [docs.szlholdings.com](https://szl-holdings.github.io/docs-site) for the public product walkthrough.
-
-> **HF name mapping (alignment fix 2026-06-30):** The HF Space for this repo is
-> [`SZLHOLDINGS/khipu-constellation`](https://huggingface.co/spaces/SZLHOLDINGS/khipu-constellation)
-> (the live 3D BFT mesh visualization). The previous link to `khipu-consensus-live` was
-> a non-existent Space — the correct entry is `khipu-constellation`.
 
 ## ⚡ Quick start (30 seconds)
 
