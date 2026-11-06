@@ -1,0 +1,29 @@
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "khipu-consensus"
+version = "0.1.0"
+description = "BFT 3-of-4 multi-party-witnessed agreement — each witness signs an action hash with its own ECDSA P-256 cosign key over DSSE. The category SZL builds: multi-party-witnessed AI. Doctrine v11 LOCKED"
+readme = "README.md"
+requires-python = ">=3.11"
+license = "Apache-2.0"
+authors = [{ name = "Stephen Lutar", email = "stephen@szlholdings.com" }]
+dependencies = []
+
+[project.urls]
+Homepage = "https://a-11-oy.com"
+Repository = "https://github.com/szl-holdings/khipu-consensus"
+
+[tool.setuptools]
+packages = ["khipu_consensus"]
+package-dir = { "" = "python" }
+
+[tool.ruff]
+line-length = 120
+target-version = "py311"
+extend-exclude = ["build", "dist", ".venv", "node_modules"]
+
+[tool.pytest.ini_options]
+minversion = "7.0"
