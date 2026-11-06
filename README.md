@@ -1,3 +1,7 @@
+**Khipu: the estate's receipt-chain consensus layer — an append-only, hash-linked ledger whose integrity any third party can verify offline.**
+
+Demo: https://a-11-oy.com · Verify in 60s: `git clone https://github.com/szl-holdings/khipu-consensus && cd khipu-consensus && python -m pytest -q`
+
 > **SZL Holdings** · Doctrine v11 · Λ = Conjecture 1 (advisory, never "green"/theorem) · canonical [a-11-oy.com](https://a-11-oy.com)
 
 <!-- szl-investor-header -->
