@@ -85,12 +85,29 @@ def v1_attest(req: AttestRequest):
     return JSONResponse(receipt.to_dict())
 
 
+def _contains_nonfinite(value) -> bool:
+    """True if a parsed JSON value holds NaN/Infinity (Python's parser accepts
+    them; they are not JSON numbers and have no canonical receipt identity)."""
+    if isinstance(value, float):
+        return value != value or value in (float("inf"), float("-inf"))
+    if isinstance(value, dict):
+        return any(_contains_nonfinite(v) for v in value.values())
+    if isinstance(value, list):
+        return any(_contains_nonfinite(v) for v in value)
+    return False
+
+
 @app.post("/v1/verify")
 def v1_verify(req: VerifyRequest):
     registry = require_registry()
     if req.pubkeys and req.pubkeys != registry.pubkeys():
         return JSONResponse(
             {"detail": "pubkeys must exactly match the operator-owned witness registry"},
+            status_code=400,
+        )
+    if _contains_nonfinite(req.receipt):
+        return JSONResponse(
+            {"detail": "receipt contains a non-finite number (NaN/Infinity)"},
             status_code=400,
         )
     try:
