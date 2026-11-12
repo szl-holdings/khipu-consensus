@@ -95,13 +95,19 @@ def v1_verify(req: VerifyRequest):
         )
     try:
         result = verify_receipt(req.receipt, registry=registry)
-    except UnicodeEncodeError:
+    except ValueError as exc:
         # Python's JSON parser accepts escaped lone surrogates, but they are not
-        # valid UTF-8 and therefore cannot have the canonical receipt identity
-        # required by this endpoint. Reject them as malformed client input
-        # instead of letting canonical hashing escape as a server error.
+        # valid UTF-8 and cannot have a canonical receipt identity.
+        # UnicodeEncodeError is a ValueError subclass; keep its specific message.
+        if isinstance(exc, UnicodeEncodeError):
+            return JSONResponse(
+                {"detail": "receipt contains text that is not valid UTF-8"},
+                status_code=400,
+            )
+        # NaN/Infinity are accepted by Python's JSON parser but are not JSON
+        # numbers, so they have no canonical receipt identity.
         return JSONResponse(
-            {"detail": "receipt contains text that is not valid UTF-8"},
+            {"detail": "receipt contains a non-finite number (NaN/Infinity)"},
             status_code=400,
         )
     return JSONResponse(result)
