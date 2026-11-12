@@ -26,8 +26,11 @@ __version__ = "0.1.0"
 
 
 def canonical_json(obj) -> bytes:
-    """Deterministic canonical JSON: sorted keys, compact separators, UTF-8."""
-    return json.dumps(obj, sort_keys=True, separators=(",", ":"), ensure_ascii=False).encode("utf-8")
+    """Deterministic canonical JSON: sorted keys, compact separators, UTF-8.
+
+    NaN/Infinity are not JSON numbers and raise ValueError (never hashed)."""
+    return json.dumps(obj, sort_keys=True, separators=(",", ":"), ensure_ascii=False,
+                      allow_nan=False).encode("utf-8")
 
 
 def pae(payload_type: str, body: bytes) -> bytes:
