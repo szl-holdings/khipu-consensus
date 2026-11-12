@@ -85,6 +85,18 @@ def v1_attest(req: AttestRequest):
     return JSONResponse(receipt.to_dict())
 
 
+def _contains_nonfinite(value) -> bool:
+    """True if a parsed JSON value holds NaN/Infinity (Python's parser accepts
+    them; they are not JSON numbers and have no canonical receipt identity)."""
+    if isinstance(value, float):
+        return value != value or value in (float("inf"), float("-inf"))
+    if isinstance(value, dict):
+        return any(_contains_nonfinite(v) for v in value.values())
+    if isinstance(value, list):
+        return any(_contains_nonfinite(v) for v in value)
+    return False
+
+
 @app.post("/v1/verify")
 def v1_verify(req: VerifyRequest):
     registry = require_registry()
@@ -93,21 +105,20 @@ def v1_verify(req: VerifyRequest):
             {"detail": "pubkeys must exactly match the operator-owned witness registry"},
             status_code=400,
         )
-    try:
-        result = verify_receipt(req.receipt, registry=registry)
-    except ValueError as exc:
-        # Python's JSON parser accepts escaped lone surrogates, but they are not
-        # valid UTF-8 and cannot have a canonical receipt identity.
-        # UnicodeEncodeError is a ValueError subclass; keep its specific message.
-        if isinstance(exc, UnicodeEncodeError):
-            return JSONResponse(
-                {"detail": "receipt contains text that is not valid UTF-8"},
-                status_code=400,
-            )
-        # NaN/Infinity are accepted by Python's JSON parser but are not JSON
-        # numbers, so they have no canonical receipt identity.
+    if _contains_nonfinite(req.receipt):
         return JSONResponse(
             {"detail": "receipt contains a non-finite number (NaN/Infinity)"},
+            status_code=400,
+        )
+    try:
+        result = verify_receipt(req.receipt, registry=registry)
+    except UnicodeEncodeError:
+        # Python's JSON parser accepts escaped lone surrogates, but they are not
+        # valid UTF-8 and therefore cannot have the canonical receipt identity
+        # required by this endpoint. Reject them as malformed client input
+        # instead of letting canonical hashing escape as a server error.
+        return JSONResponse(
+            {"detail": "receipt contains text that is not valid UTF-8"},
             status_code=400,
         )
     return JSONResponse(result)
