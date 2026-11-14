@@ -354,6 +354,9 @@ def verify_receipt(receipt: dict, pubkeys: Optional[dict] = None, *,
     trust_policy_matches = (
         embedded_keys_well_formed
         and embedded_pubkeys == trusted_pubkeys
+        # Counts must match as integers, not equal-valued booleans or floats.
+        and type(receipt.get("threshold")) is int
+        and type(receipt.get("n")) is int
         and receipt.get("threshold") == trusted_threshold
         and receipt.get("n") == trusted_n
     )

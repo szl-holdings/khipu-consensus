@@ -141,6 +141,35 @@ def test_embedded_threshold_weakening_cannot_define_quorum():
     assert rv["matches_claimed_decision"] is False
 
 
+@pytest.mark.parametrize("field", ["threshold", "n"])
+@pytest.mark.parametrize("value", [True, 1.0])
+def test_noninteger_receipt_counts_cannot_match_single_witness_policy(field, value):
+    reg = WitnessRegistry([_signing_registry().all()[0]], threshold=1)
+    receipt = attest(ACTION_HASH, reg).to_dict()
+    assert verify_receipt(receipt, registry=reg)["decision"] == "canonical"
+
+    # Python equality alone treats True and 1.0 as the trusted integer 1.
+    receipt[field] = value
+    rv = verify_receipt(receipt, registry=reg)
+
+    assert rv["trust_policy_matches"] is False
+    assert rv["decision"] == "rejected"
+    assert rv["matches_claimed_decision"] is False
+
+
+@pytest.mark.parametrize("field", ["threshold", "n"])
+def test_whole_float_receipt_counts_cannot_match_three_of_four_policy(field):
+    reg = _signing_registry()
+    receipt = attest(ACTION_HASH, reg).to_dict()
+    receipt[field] = float(receipt[field])
+
+    rv = verify_receipt(receipt, registry=reg)
+
+    assert rv["trust_policy_matches"] is False
+    assert rv["decision"] == "rejected"
+    assert rv["matches_claimed_decision"] is False
+
+
 def test_sdk_in_process_roundtrip():
     reg = _signing_registry()
     client = KhipuWitnessClient(registry=reg)
