@@ -144,8 +144,9 @@ class ReceiptTree:
         return self.leaves[index]
 
     def inclusion_proof(self, index: int) -> list:
-        """RFC 6962 audit path for leaf index: a bottom-up list of
-        {"node": <hex>, "left": bool} sibling-subtree roots."""
+        """RFC 6962 audit path for leaf index: a BOTTOM-UP list (deepest
+        sibling first) of {"node": <hex>, "left": bool} sibling-subtree
+        roots, as consumed by verify_inclusion."""
         if type(index) is not int or index < 0 or index >= len(self.leaves):
             raise IndexError("index out of range")
         path = []
@@ -162,7 +163,7 @@ class ReceiptTree:
                 path.append({"node": _subtree_root(self.leaves, lo, lo + k),
                              "left": True})
                 lo = lo + k
-        return path
+        return path[::-1]
 
     def sth(self, timestamp: str = "") -> SignedTreeHead:
         """The SignedTreeHead over this tree (step 1 format)."""
