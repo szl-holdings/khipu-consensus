@@ -56,6 +56,7 @@ from .sth import (
     merkle_root,
     node_hash,
     verify_sth_receipt,
+    receipt_release_eligible,
 )
 from .witness import WitnessRegistry
 
@@ -133,6 +134,8 @@ class ReceiptTree:
         BEFORE any hashing (fail-closed: never hash ambiguous input)."""
         if not isinstance(session_id, str) or not session_id:
             raise ValueError("session_id must be a non-empty string")
+        if type(leaf_hexes) not in (list, tuple) or len(leaf_hexes) > 4096:
+            raise ValueError("bounded receipt population required")
         leaves = list(leaf_hexes)
         for d in leaves:
             if not _is_digest(d):
@@ -210,7 +213,7 @@ def verify_inclusion(leaf_hex: str, index: int, tree_size: int,
         return False
     if type(index) is not int or type(tree_size) is not int:
         return False
-    if index < 0 or tree_size < 1 or index >= tree_size:
+    if index < 0 or not 1 <= tree_size <= 4096 or index >= tree_size:
         return False
     if not isinstance(proof, list):
         return False
@@ -259,6 +262,8 @@ class RecallDecision:
     note: str
     adjudication: dict
     version: str
+    execution_authorized: bool = False
+    policy_authorized: bool = False
 
     def to_dict(self) -> dict:
         return asdict(self)
@@ -269,7 +274,7 @@ class RecallDecision:
             schema=d.get("schema", ""),
             session_id=d.get("session_id", ""),
             status=d.get("status", RECALL_DENY),
-            release=bool(d.get("release", False)),
+            release=d.get("release") is True,
             reason=d.get("reason", ""),
             target_index=d.get("target_index"),
             target_digest=d.get("target_digest"),
@@ -307,7 +312,8 @@ def _deny(tree, target_index, target_digest, threshold, n,
 
 
 def recall_gate(tree, sth_receipt, trusted_pubkeys: dict, target_index,
-                target_digest: str, threshold: int = 3) -> RecallDecision:
+                target_digest: str, threshold: int = 3, *, hard_deny=True,
+                now=None, max_age_seconds=None) -> RecallDecision:
     """Fail-closed recall gate (spec 1.3): a recall from a plane session is
     RELEASEd only when the tree is intact, the target is located and covered
     by an inclusion proof, and the STH receipt adjudicates VERIFIED against
@@ -318,6 +324,9 @@ def recall_gate(tree, sth_receipt, trusted_pubkeys: dict, target_index,
     authorizes (spec 4).
     """
     n = len(trusted_pubkeys) if isinstance(trusted_pubkeys, dict) else 0
+    if hard_deny is not False:
+        return _deny(tree, target_index, target_digest, threshold, n,
+                     "hard deny or missing trusted policy context")
     # 1. tree present, correct schema
     if not isinstance(tree, ReceiptTree):
         return _deny(tree, target_index, target_digest, threshold, n,
@@ -325,6 +334,10 @@ def recall_gate(tree, sth_receipt, trusted_pubkeys: dict, target_index,
     if tree.schema != RECEIPT_TREE_SCHEMA:
         return _deny(tree, target_index, target_digest, threshold, n,
                      "schema mismatch (fail-closed deny)")
+    if (type(tree.tree_size) is not int or not 0 <= tree.tree_size <= 4096
+            or type(tree.leaves) is not list or len(tree.leaves) != tree.tree_size):
+        return _deny(tree, target_index, target_digest, threshold, n,
+                     "malformed tree population or size mismatch")
     # 2. tree root recomputes from its leaves (structure intact)
     try:
         recomputed = merkle_root(tree.leaves)
@@ -373,7 +386,15 @@ def recall_gate(tree, sth_receipt, trusted_pubkeys: dict, target_index,
                      verdict.reason,
                      sth_status=verdict.status,
                      adjudication=verdict.to_dict())
-    # 5. all evidence present and located: release the recall
+    if not receipt_release_eligible(
+            receipt_dict, trusted_pubkeys=trusted_pubkeys,
+            expected_root=tree.sha256_root_hash, expected_session_id=tree.session_id,
+            expected_tree_size=tree.tree_size, now=now,
+            max_age_seconds=max_age_seconds, hard_deny=hard_deny):
+        return _deny(tree, target_index, target_digest, threshold, n,
+                     "missing or stale action-bound coverage context",
+                     sth_status=verdict.status, adjudication=verdict.to_dict())
+    # 5. Coverage eligibility only; action effects remain outside this library.
     return RecallDecision(
         schema=RECALL_DECISION_SCHEMA,
         session_id=tree.session_id,

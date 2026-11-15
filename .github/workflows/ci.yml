@@ -24,7 +24,7 @@ jobs:
       - name: Witness trust-boundary and service ingress tests
         run: |
           pip install "fastapi>=0.100" "pydantic>=2.0" httpx
-          cd python && python -m pytest tests/test_witness.py tests/test_service.py -q
+          cd python && python -m pytest tests/test_witness.py tests/test_service.py tests/test_sth.py tests/test_receipt_tree.py tests/test_sth_security.py -q
   go:
     runs-on: ubuntu-latest
     steps:
