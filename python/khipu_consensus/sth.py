@@ -15,8 +15,8 @@ v0.4 spec (szl-frontier docs/COVENANT_V0_4_COUNTERSIGN_SPEC_2026-11-15.md, §1):
   * WITNESS COUNTERSIGNING: the 3-of-4 BFT witness pool signs the STH root
     hash with the EXISTING, mutation-tested primitives (sign_verdict /
     verify_verdict / tally — ECDSA-P256-SHA256 over the DSSE PAE). The v0.4
-    STH binding (session id + tree size) travels INSIDE the signed statement
-    (the `reason` field), so the binding is covered by the witness
+    v2 STH binding (every header field, including timestamp) travels INSIDE the signed statement
+    (the `reason` field), so the full-header binding is covered by the witness
     signature. This module adds NO new cryptography and NO new signature
     verifier surface.
   * FAIL-CLOSED RULE (spec §1.3): an STH receipt is VERIFIED only when at
@@ -24,8 +24,8 @@ v0.4 spec (szl-frontier docs/COVENANT_V0_4_COUNTERSIGN_SPEC_2026-11-15.md, §1):
     verify over the SAME root with a matching STH binding. Missing evidence
     — no signatures, absent root, malformed receipt, unparseable binding, or
     an insufficient quorum — yields UNKNOWN; an invalid signature or a
-    located mismatch yields TAMPERED. `release_allowed` is True only for
-    VERIFIED: no countersigned STH, no release of recalls.
+    located mismatch yields TAMPERED. Status objects never grant release;
+    original evidence, caller-held context and freshness are checked at use.
 
 Honesty (binding, doctrine):
   * Witness nodes are estate-operated in v0.4.0 (distinct keys, distinct
@@ -49,16 +49,17 @@ from typing import Optional, Sequence
 from . import (
     OrganVerdict,
     _valid_quorum_counts,
-    sign_verdict,
+    canonical_json,
+    ORGAN_VERDICT_PAYLOAD_TYPE,
     tally,
     verify_verdict,
     __version__,
 )
 from .witness import SAFETY_STATUS, WitnessRegistry
 
-STH_SCHEMA = "szl.khipu.sth/v1"
-STH_RECEIPT_SCHEMA = "szl.khipu.sth-countersign-receipt/v1"
-STH_ADJUDICATION_SCHEMA = "szl.khipu.sth-adjudication/v1"
+STH_SCHEMA = "szl.khipu.sth/v2"
+STH_RECEIPT_SCHEMA = "szl.khipu.sth-countersign-receipt/v2"
+STH_ADJUDICATION_SCHEMA = "szl.khipu.sth-adjudication/v2"
 STH_BINDING_PREFIX = "v0.4-sth"
 
 STH_STATUS_VERIFIED = "VERIFIED"
@@ -95,9 +96,11 @@ def merkle_root(leaf_hexes: Sequence[str]) -> str:
     subtree roots. Invalid leaf digests raise ValueError BEFORE any hashing
     (fail-closed: never hash ambiguous or truncated input).
     """
+    if type(leaf_hexes) not in (list, tuple) or len(leaf_hexes) > 4096:
+        raise ValueError("bounded list or tuple of at most 4096 leaf digests required")
     leaves = list(leaf_hexes)
     for d in leaves:
-        if not isinstance(d, str) or len(d) != 64:
+        if not _is_root_hash(d):
             raise ValueError("leaf digests must be 64-char hex strings")
         bytes.fromhex(d)  # raises ValueError on non-hex
     if not leaves:
@@ -114,6 +117,30 @@ def merkle_root(leaf_hexes: Sequence[str]) -> str:
 def sth_binding(session_id: str, tree_size: int) -> str:
     """The STH binding string carried inside every witness's signed statement."""
     return f"{STH_BINDING_PREFIX} session={session_id} tree_size={int(tree_size)}"
+
+
+def _unique_members(pairs):
+    result = {}
+    for key, value in pairs:
+        if key in result:
+            raise ValueError("duplicate JSON member")
+        result[key] = value
+    return result
+
+
+def _full_head_binding(head: dict) -> str:
+    """v2 signs all six header fields; v1 bytes are never reinterpreted."""
+    fields = {"schema", "session_id", "version", "tree_size", "timestamp", "sha256_root_hash"}
+    if (type(head) is not dict or set(head) != fields
+            or head["schema"] != STH_SCHEMA or type(head["version"]) is not int
+            or head["version"] != 2 or type(head["session_id"]) is not str
+            or not 0 < len(head["session_id"]) <= 128
+            or type(head["tree_size"]) is not int or not 0 <= head["tree_size"] <= 4096
+            or type(head["timestamp"]) is not str or not 0 < len(head["timestamp"]) <= 80
+            or not _is_root_hash(head["sha256_root_hash"])):
+        raise ValueError("invalid v2 STH header")
+    digest = hashlib.sha256(b"SZL-STH-HEADER-V2\x00" + canonical_json(head)).hexdigest()
+    return "v0.4-sth-full/v2 sha256=" + digest
 
 
 @dataclass
@@ -142,7 +169,7 @@ class SignedTreeHead:
         )
 
     def binding(self) -> str:
-        return sth_binding(self.session_id, self.tree_size)
+        return _full_head_binding(self.to_dict())
 
 
 def build_sth(session_id: str, leaf_hexes: Sequence[str],
@@ -154,7 +181,7 @@ def build_sth(session_id: str, leaf_hexes: Sequence[str],
     return SignedTreeHead(
         schema=STH_SCHEMA,
         session_id=session_id,
-        version=1,
+        version=2,
         tree_size=len(list(leaf_hexes)),
         timestamp=timestamp or datetime.now(timezone.utc).isoformat(),
         sha256_root_hash=root,
@@ -280,9 +307,46 @@ class STHVerdict:
 
 
 def release_allowed(verdict: STHVerdict) -> bool:
-    """Fail-closed recall gate (spec 1.3): only a VERIFIED countersigned STH
-    releases recalls. Absent, insufficient, or disagreeing evidence denies."""
-    return isinstance(verdict, STHVerdict) and verdict.verified
+    """Legacy status-only helper: no submitted verdict can authorize a recall.
+
+    Use receipt_release_eligible with original evidence and trusted action context.
+    """
+    # A submitted verdict is an assertion, not verification material. Existing
+    # one-argument callers now deny; use the explicit evidence predicate below.
+    return receipt_release_eligible(verdict)
+
+
+def receipt_release_eligible(receipt, *, trusted_pubkeys=None,
+                             expected_root=None, expected_session_id=None,
+                             expected_tree_size=None, now=None,
+                             max_age_seconds=None, hard_deny=True) -> bool:
+    """Necessary coverage/freshness condition, never an execution capability.
+
+    All keyword context comes from the trusted caller, not receipt fields.
+    Reverify signatures at use time. This does not implement action-once effects,
+    tenant authorization, independent hosts or append-only continuity.
+    """
+    if hard_deny is not False or type(receipt) is not dict:
+        return False
+    if (type(trusted_pubkeys) is not dict or not _is_root_hash(expected_root)
+            or type(expected_session_id) is not str or not expected_session_id
+            or type(expected_tree_size) is not int or not 0 < expected_tree_size <= 4096
+            or type(max_age_seconds) is not int or not 0 < max_age_seconds <= 3600
+            or not isinstance(now, datetime) or now.tzinfo is None or now.utcoffset() is None):
+        return False
+    verdict = verify_sth_receipt(receipt, trusted_pubkeys, expected_root=expected_root,
+                                 expected_session_id=expected_session_id,
+                                 expected_tree_size=expected_tree_size)
+    if not verdict.verified:
+        return False
+    try:
+        timestamp = datetime.fromisoformat(receipt["sth"]["timestamp"].replace("Z", "+00:00"))
+        if timestamp.tzinfo is None or timestamp.utcoffset() is None:
+            return False
+        age = (now - timestamp).total_seconds()
+    except (ValueError, TypeError, KeyError, OverflowError):
+        return False
+    return 0 <= age < max_age_seconds
 
 
 def _unknown(receipt, reason: str, threshold: int, n: int) -> STHVerdict:
@@ -325,8 +389,29 @@ def verify_sth_receipt(receipt, trusted_pubkeys: dict, threshold: int = 3,
     `n` is the size of the TRUSTED pool, never a value claimed by the receipt.
     """
     n = len(trusted_pubkeys) if isinstance(trusted_pubkeys, dict) else 0
-    if not _valid_quorum_counts(threshold, n):
-        return _unknown(receipt, "invalid quorum counts (threshold/n)", threshold, n)
+    if not _valid_quorum_counts(threshold, n) or threshold != 3 or n != 4:
+        return _unknown(receipt, "v2 requires exactly three of four trusted witnesses", threshold, n)
+    # Organ labels are not independent keys. Reject aliasing or malformed public
+    # configuration before verifying attacker-supplied rows. No private key read.
+    from cryptography.hazmat.primitives.asymmetric import ec
+    from cryptography.hazmat.primitives.serialization import (
+        Encoding, PublicFormat, load_pem_public_key,
+    )
+    fingerprints = set()
+    for organ, pem in trusted_pubkeys.items():
+        if (type(organ) is not str or not organ or type(pem) is not str
+                or not 0 < len(pem) <= 4096):
+            return _unknown(receipt, "malformed trusted witness configuration", threshold, n)
+        try:
+            key = load_pem_public_key(pem.encode("ascii"))
+        except (ValueError, TypeError, UnicodeError):
+            return _unknown(receipt, "malformed trusted public key", threshold, n)
+        if not isinstance(key, ec.EllipticCurvePublicKey) or not isinstance(key.curve, ec.SECP256R1):
+            return _unknown(receipt, "trusted key must be ECDSA P-256", threshold, n)
+        fingerprint = hashlib.sha256(key.public_bytes(Encoding.DER, PublicFormat.SubjectPublicKeyInfo)).digest()
+        if fingerprint in fingerprints:
+            return _unknown(receipt, "duplicate trusted public key", threshold, n)
+        fingerprints.add(fingerprint)
     if not isinstance(receipt, dict):
         return _unknown(receipt, "receipt is not an object", threshold, n)
     if receipt.get("schema") != STH_RECEIPT_SCHEMA:
@@ -339,10 +424,14 @@ def verify_sth_receipt(receipt, trusted_pubkeys: dict, threshold: int = 3,
         return _unknown(receipt, "missing or malformed root hash", threshold, n)
     if not isinstance(session_id, str) or not session_id:
         return _unknown(receipt, "missing session id", threshold, n)
-    if not isinstance(tree_size, int) or tree_size < 0:
+    if type(tree_size) is not int or not 0 <= tree_size <= 4096:
         return _unknown(receipt, "missing or malformed tree size", threshold, n)
-    if not isinstance(sigs, list):
-        return _unknown(receipt, "missing signatures", threshold, n)
+    if type(sigs) is not list or len(sigs) > 4:
+        return _unknown(receipt, "missing or excessive signatures", threshold, n)
+    if type(receipt.get("threshold")) is not int or receipt.get("threshold") != threshold:
+        return _unknown(receipt, "receipt threshold differs from trusted policy", threshold, n)
+    if type(receipt.get("n")) is not int or receipt.get("n") != n:
+        return _unknown(receipt, "receipt witness count differs from trusted policy", threshold, n)
 
     # Located mismatches against caller-held expectations are TAMPERED.
     if expected_root is not None and root != expected_root:
@@ -358,7 +447,10 @@ def verify_sth_receipt(receipt, trusted_pubkeys: dict, threshold: int = 3,
                           session_id, tree_size, root, 0, threshold, n, [],
                           "tree size mismatch with expected size (located)")
 
-    binding = sth_binding(session_id, tree_size)
+    try:
+        binding = _full_head_binding(receipt.get("sth"))
+    except (ValueError, TypeError, UnicodeError):
+        return _unknown(receipt, "missing or malformed full STH header", threshold, n)
     checks = []
     counted = set()
     count = 0
@@ -369,13 +461,35 @@ def verify_sth_receipt(receipt, trusted_pubkeys: dict, threshold: int = 3,
                            "verdict": None, "action_hash_match": False,
                            "counts": False, "reason": "abstain/timeout"})
             continue
+        if not isinstance(item, (dict, OrganVerdict)):
+            return _unknown(receipt, "malformed signature entry", threshold, n)
+        if isinstance(item, dict):
+            fields = ("organ", "keyid", "payloadType", "payload", "signature")
+            if any(type(item.get(field)) is not str for field in fields):
+                return _unknown(receipt, "malformed signature fields", threshold, n)
         v = item if isinstance(item, OrganVerdict) else OrganVerdict.from_dict(item)
+        if any(type(value) is not str for value in (
+                v.organ, v.keyid, v.payload_type, v.payload_b64, v.signature_b64)):
+            return _unknown(receipt, "malformed signature fields", threshold, n)
         pem = trusted_pubkeys.get(v.organ, "")
         if not pem:
             checks.append({"organ": v.organ, "keyid": v.keyid, "valid": False,
                            "verdict": None, "action_hash_match": False,
                            "counts": False, "reason": "no trusted public key"})
             continue
+        if (v.payload_type != ORGAN_VERDICT_PAYLOAD_TYPE
+                or len(v.payload_b64) > 16384 or len(v.signature_b64) > 1024):
+            return _unknown(receipt, "signature domain or size invalid", threshold, n)
+        try:
+            body = base64.b64decode(v.payload_b64, validate=True)
+            statement = json.loads(body, object_pairs_hook=_unique_members)
+            required = {"schema", "organ", "keyid", "action_hash", "verdict", "reason", "lean_sha", "ts"}
+            if (type(statement) is not dict or set(statement) != required
+                    or any(type(value) is not str for value in statement.values())
+                    or body != canonical_json(statement)):
+                return _unknown(receipt, "noncanonical witness statement", threshold, n)
+        except (ValueError, TypeError, UnicodeError, RecursionError):
+            return _unknown(receipt, "malformed witness statement", threshold, n)
         chk = verify_verdict(v, pem, root)
         entry = {"organ": v.organ, "keyid": v.keyid, "valid": chk.valid,
                  "verdict": chk.verdict, "action_hash_match": chk.action_hash_match,
@@ -383,8 +497,7 @@ def verify_sth_receipt(receipt, trusted_pubkeys: dict, threshold: int = 3,
         if chk.valid and chk.counts:
             # The signature verifies over this root; check WHAT it binds.
             try:
-                stmt = json.loads(base64.b64decode(v.payload_b64))
-                reason = stmt.get("reason", "")
+                reason = statement.get("reason", "")
             except Exception:
                 reason = None
             if reason == binding:
@@ -409,6 +522,16 @@ def verify_sth_receipt(receipt, trusted_pubkeys: dict, threshold: int = 3,
         return STHVerdict(STH_ADJUDICATION_SCHEMA, STH_STATUS_TAMPERED,
                           session_id, tree_size, root, count, threshold, n,
                           checks, tamper)
+    head = receipt.get("sth")
+    if (type(head) is not dict or head.get("schema") != STH_SCHEMA
+            or type(head.get("version")) is not int or head.get("version") != 2
+            or type(head.get("tree_size")) is not int
+            or head.get("tree_size") != tree_size
+            or head.get("session_id") != session_id
+            or head.get("sha256_root_hash") != root):
+        return STHVerdict(STH_ADJUDICATION_SCHEMA, STH_STATUS_TAMPERED,
+                          session_id, tree_size, root, count, threshold, n,
+                          checks, "located: sth-binding-mismatch between nested and outer receipt")
     if count >= threshold:
         return STHVerdict(STH_ADJUDICATION_SCHEMA, STH_STATUS_VERIFIED,
                           session_id, tree_size, root, count, threshold, n,

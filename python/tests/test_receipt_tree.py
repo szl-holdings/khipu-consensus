@@ -29,11 +29,18 @@ from khipu_consensus.receipt_tree import (
     RECEIPT_TREE_SCHEMA,
     ReceiptTree,
     RecallDecision,
-    recall_gate,
+    recall_gate as _recall_gate,
     seal_receipt_tree,
     verify_inclusion,
 )
 from khipu_consensus.witness import Witness, WitnessRegistry
+
+
+def recall_gate(*args, **kwargs):
+    """Trusted test context for the migrated fail-closed API, not receipt input."""
+    from datetime import datetime, timezone
+    return _recall_gate(*args, hard_deny=False, now=datetime.now(timezone.utc),
+                        max_age_seconds=300, **kwargs)
 
 
 def _digest(seed):

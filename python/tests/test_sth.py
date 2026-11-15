@@ -138,7 +138,7 @@ class TestSTHFormat:
         assert sth.sha256_root_hash == merkle_root(leaves)
         assert sth.tree_size == 7
         assert sth.session_id == "session-alpha"
-        assert sth.version == 1
+        assert sth.version == 2
         d = sth.to_dict()
         assert SignedTreeHead.from_dict(d).to_dict() == d
 
@@ -159,7 +159,7 @@ class TestCountersign:
         v = verify_sth_receipt(receipt.to_dict(), _trusted(reg))
         assert v.status == STH_STATUS_VERIFIED
         assert v.consensus_count == 3
-        assert release_allowed(v) is True
+        assert release_allowed(v) is False  # status alone is not evidence at action time
 
     def test_two_of_four_fails_closed_unknown(self):
         reg, _ = _registry(keepers=("sentra", "amaru"))
