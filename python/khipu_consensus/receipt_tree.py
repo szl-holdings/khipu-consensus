@@ -92,6 +92,29 @@ def _subtree_root(leaves: Sequence[str], lo: int, hi: int) -> str:
                      _subtree_root(leaves, lo + k, hi))
 
 
+def _proof_orientations(index: int, tree_size: int) -> list:
+    """Top-down orientation flags of the RFC 6962 audit path for index.
+
+    verify_inclusion uses this to bind the CLAIMED (index, tree_size) to
+    the supplied proof: the proof length and orientation sequence must
+    match the shape the split rule mandates, so a proof generated for a
+    different index never verifies regardless of node values.
+    """
+    orients = []
+    lo, hi = 0, tree_size
+    while hi - lo > 1:
+        k = 1
+        while (k * 2) < (hi - lo):
+            k *= 2
+        if index - lo < k:
+            orients.append(False)
+            hi = lo + k
+        else:
+            orients.append(True)
+            lo = lo + k
+    return orients
+
+
 @dataclass
 class ReceiptTree:
     """Per-plane-session receipt tree (spec 1.1): ordered operation-receipt
@@ -174,6 +197,11 @@ def verify_inclusion(leaf_hex: str, index: int, tree_size: int,
                      proof: list, root_hex: str) -> bool:
     """Verify a portable RFC 6962 inclusion proof bottom-up.
 
+    The proof is bound to the claimed (index, tree_size): its length and
+    orientation sequence must match the audit-path shape the RFC 6962
+    split rule produces for that index, so a proof generated for a
+    different index never verifies regardless of node values.
+
     Fail-closed: any malformed input (bad digest, bool posing as int,
     out-of-range index, non-list proof, malformed node) yields False — the
     proof NEVER verifies on missing or ambiguous evidence.
@@ -186,13 +214,18 @@ def verify_inclusion(leaf_hex: str, index: int, tree_size: int,
         return False
     if not isinstance(proof, list):
         return False
+    expected = _proof_orientations(index, tree_size)
+    if len(proof) != len(expected):
+        return False
     h = leaf_hash(leaf_hex)
-    for step in proof:
+    for step, want in zip(proof, reversed(expected)):
         if not isinstance(step, dict):
             return False
         node = step.get("node")
         left = step.get("left")
         if not _is_digest(node) or type(left) is not bool:
+            return False
+        if left != want:
             return False
         h = node_hash(node, h) if left else node_hash(h, node)
     return h == root_hex
