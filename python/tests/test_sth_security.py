@@ -238,3 +238,16 @@ def test_serialized_status_and_authority_fields_do_not_grant():
                                         'execution_authorized':True,'policy_authorized':True})
     assert decision.release is False
     assert decision.execution_authorized is False and decision.policy_authorized is False
+
+
+def test_producer_does_not_claim_same_key_aliases_are_canonical():
+    registry,receipt=fixture(same_key=True)
+    assert receipt["decision"]=="rejected"
+    assert receipt["countersign_count"]==0
+
+
+def test_producer_does_not_assert_unmeasured_host_independence():
+    _,receipt=fixture()
+    assert receipt["provenance"]["witness_scope"]["status"]=="DECLARED_NOT_ATTESTED"
+    assert receipt["provenance"]["host_independence_verified"] is False
+    assert receipt["provenance"]["production_qualified"] is False

@@ -9,7 +9,7 @@ witness keys. Source base: `7a008c242a22efc3c0441c9997784440e5e3f9e8`.
 
 ## Why this is a versioned correction
 
-The original merged verifier accepted seven independently enumerated development
+The original merged verifier accepted seven previously enumerated development
 boundary probes: key reuse under different organ labels, unsigned timestamp edits,
 contradictory nested header fields, boolean populations, malformed signature rows,
 empty-population release, and caller-constructed VERIFIED status objects. Those
@@ -62,22 +62,24 @@ This library does not provide tenant authorization, exactly-once side effects,
 atomic enforcement across processes, revocation infrastructure, live host evidence,
 or append-only continuity from independently retained earlier checkpoints.
 
-The existing producer's registry and configured witness behavior are inputs, not
-proof of distribution. The receipt's claimed decision is never accepted as the
+The producer now derives its claimed decision from the v2 verification result;
+a duplicate-key pool cannot emit a canonical claim. Its provenance explicitly
+marks host independence and production qualification unverified. The existing
+registry and configured witness behavior remain inputs, not proof of distribution. The receipt's claimed decision is never accepted as the
 verification result. No claim of external independence or proven BFT safety or
 liveness follows from this patch. Lambda remains Conjecture 1.
 
 ## Test population and migration
 
-The current source baseline contains 268 test cases. The repair adds 74 security
-cases, including the same nine review probes, for **342 cases** in the combined
+The current source baseline contains 268 test cases. The repair adds 76 security
+cases, including the same nine review probes, for **344 cases** in the combined
 local run. Existing Merkle, inclusion-proof, signature-tamper, disagreement and
 negative-path assertions remain. The intentional API migrations are explicit:
 header version 2; the old status-only helper no longer grants eligibility; existing
 recall tests supply trusted fixture context while new tests check missing context,
 hard denies, expiry, wrong scope and malformed values.
 
-The final qualified local run passed all 342 cases, with zero failures, errors or
+The final qualified local run passed all 344 cases, with zero failures, errors or
 skips; scoped Ruff E9/F also passed. Earlier attempts exposed a taxonomy and reason
 compatibility failure; the product retained the located-mismatch TAMPERED verdict
 and `sth-binding-mismatch` reason rather than weakening the existing assertion.

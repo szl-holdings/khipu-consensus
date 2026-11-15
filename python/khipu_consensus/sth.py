@@ -68,10 +68,12 @@ STH_STATUS_UNKNOWN = "UNKNOWN"
 
 STH_PROVENANCE = dict(SAFETY_STATUS)
 STH_PROVENANCE["witness_scope"] = {
-    "status": "v0.4.0",
-    "note": ("estate-operated witnesses, distinct keys/hosts; claim is "
-             "multi-party-witnessed, never trustless (spec 1.4)"),
+    "status": "DECLARED_NOT_ATTESTED",
+    "note": ("caller-supplied witness configuration; signature verification does not "
+             "establish distinct hosts, operators or independent failure domains"),
 }
+STH_PROVENANCE["host_independence_verified"] = False
+STH_PROVENANCE["production_qualified"] = False
 
 
 def _sha256_hex(b: bytes) -> str:
@@ -264,7 +266,7 @@ def countersign_sth(sth: SignedTreeHead, registry: WitnessRegistry,
             "verdict": c.verdict, "action_hash_match": c.action_hash_match,
             "counts": c.counts, "reason": c.reason,
         })
-    return STHReceipt(
+    receipt = STHReceipt(
         schema=STH_RECEIPT_SCHEMA,
         sth=sth.to_dict(),
         sha256_root_hash=sth.sha256_root_hash,
@@ -281,6 +283,15 @@ def countersign_sth(sth: SignedTreeHead, registry: WitnessRegistry,
         provenance=dict(STH_PROVENANCE),
         version=__version__,
     )
+    # Producer claims use the same scoped admission result as consumption.
+    # Distinct organ labels alone must not make a rejected key pool canonical.
+    verified = verify_sth_receipt(receipt.to_dict(), registry.pubkeys(),
+                                  threshold=registry.threshold)
+    receipt.decision = "canonical" if verified.verified else "rejected"
+    receipt.countersign_count = verified.consensus_count
+    receipt.khipu_consensus = f"{verified.consensus_count}-of-{registry.n}"
+    receipt.checks = verified.checks
+    return receipt
 
 
 @dataclass
