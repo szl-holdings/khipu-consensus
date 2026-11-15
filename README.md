@@ -204,3 +204,7 @@ Cite this work via [`CITATION.cff`](CITATION.cff). Math foundations: [szl-papers
 ---
 
 **Explore the SZL estate:** [a11oy console](https://a-11-oy.com) · [LLM Router](https://github.com/szl-holdings/szl-router) · [Receipt format spec](https://github.com/szl-holdings/governed-receipt-spec) · [Lean proofs](https://github.com/szl-holdings/lutar-lean) · [Docs](https://github.com/szl-holdings/docs-site) · [🤗 SZLHOLDINGS](https://huggingface.co/SZLHOLDINGS)
+
+## Commercial support
+
+khipu-consensus is open source under Apache-2.0. Commercial licensing, dedicated support, and governed-AI estate integration are available through SZL Holdings - contact stephenlutar2@gmail.com. Sponsor development at https://github.com/sponsors/stephenlutar2-hash.
