@@ -47,6 +47,10 @@ from __future__ import annotations
 
 import hashlib
 import json
+import ipaddress
+import math
+import socket
+import time
 from dataclasses import dataclass, asdict
 from datetime import datetime, timezone
 from http.server import BaseHTTPRequestHandler, HTTPServer
@@ -67,6 +71,94 @@ ADJUDICATION_VERIFIED = "VERIFIED"
 ADJUDICATION_TAMPERED = "TAMPERED"
 ADJUDICATION_UNKNOWN = "UNKNOWN"
 
+# Frozen local-adjudication budgets; not production gateway qualification.
+MAX_BODY_BYTES = 1_048_576
+MAX_JSON_DEPTH = 32
+MAX_JSON_NODES = 32_768
+BODY_TIMEOUT_SECONDS = 5.0
+
+
+def _unique_json_members(pairs):
+    result = {}
+    for key, value in pairs:
+        if key in result:
+            raise ValueError("duplicate JSON member")
+        result[key] = value
+    return result
+
+
+def _reject_nonfinite(_value):
+    raise ValueError("nonfinite JSON number")
+
+
+def _bounded_json_bytes(value) -> bytes:
+    """Validate before canonical hashing; reject cycles, types and oversized trees.
+
+    The traversal is iterative. Shared noncyclic Python containers remain valid;
+    only containers on the active ancestor path are classified as cycles.
+    """
+    active = set()
+    stack = [(value, 0, False)]
+    nodes = 0
+    text_bytes = 0
+    while stack:
+        item, depth, leaving = stack.pop()
+        if leaving:
+            active.remove(id(item))
+            continue
+        nodes += 1
+        if nodes > MAX_JSON_NODES or depth > MAX_JSON_DEPTH:
+            raise ValueError("JSON structural budget exceeded")
+        kind = type(item)
+        if kind in (dict, list):
+            if id(item) in active:
+                raise ValueError("cyclic JSON input")
+            if len(item) > MAX_JSON_NODES:
+                raise ValueError("JSON container budget exceeded")
+            active.add(id(item))
+            stack.append((item, depth, True))
+            if kind is dict:
+                for key, child in item.items():
+                    if type(key) is not str:
+                        raise ValueError("JSON member names must be strings")
+                    if len(key) > MAX_BODY_BYTES:
+                        raise ValueError("JSON member name too large")
+                    text_bytes += len(key.encode("utf-8"))
+                    stack.append((child, depth + 1, False))
+            else:
+                stack.extend((child, depth + 1, False) for child in item)
+        elif kind is str:
+            if len(item) > MAX_BODY_BYTES:
+                raise ValueError("JSON text too large")
+            text_bytes += len(item.encode("utf-8"))
+        elif kind is float:
+            if not math.isfinite(item):
+                raise ValueError("nonfinite JSON number")
+        elif kind is int:
+            if item.bit_length() > 4096:
+                raise ValueError("JSON integer too large")
+        elif item is not None and kind is not bool:
+            raise ValueError("unsupported JSON value")
+        if text_bytes > MAX_BODY_BYTES:
+            raise ValueError("JSON text budget exceeded")
+    raw = canonical_json(value)
+    if len(raw) > MAX_BODY_BYTES:
+        raise ValueError("canonical bundle exceeds byte budget")
+    return raw
+
+
+def _valid_observation_time(ts) -> bool:
+    if type(ts) is not str or len(ts) > 80:
+        return False
+    if not ts:
+        return True
+    try:
+        parsed = datetime.fromisoformat(ts.replace("Z", "+00:00"))
+        return parsed.tzinfo is not None and parsed.utcoffset() is not None
+    except (ValueError, TypeError, UnicodeError, OverflowError):
+        return False
+
+
 ADJUDICATION_NOTE = (
     "adjudication is read-only: it proves facts about a bundle; it never "
     "lifts denies and never authorizes (spec 4); VERIFIED certifies chain "
@@ -84,15 +176,15 @@ def _is_digest(x) -> bool:
 
 
 def _bundle_digest(bundle) -> str:
-    """Digest over the submitted bundle EXACTLY as received (canonical JSON).
+    """Canonical bundle hash after bounded validation; never a raw HTTP hash.
 
-    Empty string when the bundle is not canonically serializable (still
-    fail-closed: the adjudication proceeds, the digest is just unclaimed).
+    Invalid or unhashable input has no claimed identity and cannot be VERIFIED.
     """
     try:
-        return _sha256_hex(canonical_json(bundle))
-    except Exception:
+        return _sha256_hex(_bounded_json_bytes(bundle))
+    except (ValueError, TypeError, UnicodeError, RecursionError, OverflowError):
         return ""
+
 
 @dataclass
 class AdjudicationDecision:
@@ -195,7 +287,7 @@ def _adjudicate_inner(bundle, trusted_pubkeys: dict, threshold: int,
         return _unknown(bundle_digest, trusted_pubkeys,
                         ["missing or malformed session id"], threshold, ts)
     leaves = bundle.get("leaves")
-    if not isinstance(leaves, list):
+    if type(leaves) is not list or len(leaves) > 4096:
         return _unknown(bundle_digest, trusted_pubkeys,
                         ["missing leaves (fail-closed)"], threshold, ts)
     for d in leaves:
@@ -211,7 +303,7 @@ def _adjudicate_inner(bundle, trusted_pubkeys: dict, threshold: int,
         tree = ReceiptTree.build(session_id, leaves)
     except Exception as e:
         return _unknown(bundle_digest, trusted_pubkeys,
-                        [f"tree build failed (fail-closed): {e}"], threshold, ts)
+                        [f"tree build failed (fail-closed): {type(e).__name__}"], threshold, ts)
     # 2. the STH adjudicates against caller-held TRUSTED keys, bound to the
     #    RECOMPUTED root / session / size: located mismatch -> TAMPERED
     verdict = verify_sth_receipt(
@@ -243,13 +335,19 @@ def adjudicate(bundle, trusted_pubkeys: dict, threshold: int = 3,
     DISTINCT trusted witnesses to have countersigned that SAME root with a
     matching STH binding.
     """
+    if type(threshold) is not int or threshold != 3 or not _valid_observation_time(ts):
+        return _unknown("", trusted_pubkeys,
+                        ["invalid trusted adjudication context"], 3, "")
     digest = _bundle_digest(bundle)
+    if not digest:
+        return _unknown("", trusted_pubkeys,
+                        ["bundle is not bounded canonical JSON (fail-closed)"], threshold, ts)
     try:
         return _adjudicate_inner(bundle, trusted_pubkeys, threshold, digest, ts)
     except Exception as e:
         return _unknown(digest, trusted_pubkeys,
-                        [f"internal adjudication failure (fail-closed): "
-                         f"{type(e).__name__}: {e}"], threshold, ts)
+                        ["internal adjudication failure (fail-closed): "
+                         + type(e).__name__], threshold, ts)
 
 
 def handle_adjudicate(body_bytes, trusted_pubkeys: dict, threshold: int = 3,
@@ -260,10 +358,15 @@ def handle_adjudicate(body_bytes, trusted_pubkeys: dict, threshold: int = 3,
     endpoint never raises to the caller and never PASSes on missing or
     unparseable evidence.
     """
+    if type(threshold) is not int or threshold != 3 or not _valid_observation_time(ts):
+        return _unknown("", trusted_pubkeys, ["invalid trusted adjudication context"], 3, "")
     try:
-        text = body_bytes.decode("utf-8") if isinstance(body_bytes, (bytes, bytearray)) else ""
-        bundle = json.loads(text) if text else None
-    except Exception:
+        if type(body_bytes) not in (bytes, bytearray) or not 0 < len(body_bytes) <= MAX_BODY_BYTES:
+            raise ValueError("body exceeds input budget or is empty")
+        text = body_bytes.decode("utf-8")
+        bundle = json.loads(text, object_pairs_hook=_unique_json_members,
+                            parse_constant=_reject_nonfinite)
+    except (ValueError, TypeError, UnicodeError, RecursionError, OverflowError):
         bundle = None
     if not isinstance(bundle, dict):
         return _unknown("", trusted_pubkeys,
@@ -283,15 +386,60 @@ class AdjudicationHTTPHandler(BaseHTTPRequestHandler):
     trusted_pubkeys: dict = {}
     threshold: int = 3
 
+    def setup(self):
+        self.request.settimeout(BODY_TIMEOUT_SECONDS)
+        super().setup()
+
+    def _read_body(self, length: int) -> bytes:
+        deadline = time.monotonic() + BODY_TIMEOUT_SECONDS
+        previous_timeout = self.connection.gettimeout()
+        chunks = []
+        remaining = length
+        try:
+            while remaining:
+                available = deadline - time.monotonic()
+                if available <= 0:
+                    raise TimeoutError("request body deadline exceeded")
+                self.connection.settimeout(available)
+                chunk = self.rfile.read1(min(remaining, 65536))
+                if not chunk:
+                    raise ValueError("incomplete request body")
+                chunks.append(chunk)
+                remaining -= len(chunk)
+        finally:
+            self.connection.settimeout(previous_timeout)
+        return b"".join(chunks)
+
     def do_POST(self):  # noqa: N802 (stdlib handler naming)
         if self.path.split("?")[0] != "/adjudicate":
             self._respond(404, {"error": "not found"})
             return
+        if self.headers.get_all("Transfer-Encoding"):
+            self._respond(400, {"error": "transfer encoding is unsupported"})
+            return
+        lengths = self.headers.get_all("Content-Length", [])
+        if not lengths:
+            self._respond(411, {"error": "content length required"})
+            return
+        if len(lengths) != 1:
+            self._respond(400, {"error": "ambiguous content length"})
+            return
+        value = lengths[0].strip()
+        if not value or len(value) > 10 or not value.isascii() or not value.isdecimal():
+            self._respond(400, {"error": "invalid content length"})
+            return
+        length = int(value)
+        if length > MAX_BODY_BYTES:
+            self._respond(413, {"error": "request body exceeds byte budget"})
+            return
         try:
-            length = int(self.headers.get("Content-Length", "0"))
-        except (TypeError, ValueError):
-            length = 0
-        body = self.rfile.read(length) if length > 0 else b""
+            body = self._read_body(length)
+        except TimeoutError:
+            self._respond(408, {"error": "request body timeout"})
+            return
+        except (ValueError, OSError):
+            self._respond(400, {"error": "incomplete request body"})
+            return
         decision = handle_adjudicate(body, self.trusted_pubkeys,
                                      threshold=self.threshold)
         self._respond(200, decision.to_dict())
@@ -300,10 +448,12 @@ class AdjudicationHTTPHandler(BaseHTTPRequestHandler):
         self._respond(405, {"error": "method not allowed (read-only endpoint)"})
 
     def _respond(self, code: int, payload: dict) -> None:
-        body = json.dumps(payload, sort_keys=True, indent=2).encode("utf-8")
+        body = json.dumps(payload, sort_keys=True, indent=2, allow_nan=False).encode("utf-8")
         self.send_response(code)
         self.send_header("Content-Type", "application/json")
         self.send_header("Content-Length", str(len(body)))
+        self.send_header("Connection", "close")
+        self.close_connection = True
         self.end_headers()
         self.wfile.write(body)
 
@@ -321,8 +471,22 @@ def make_adjudication_server(trusted_pubkeys: dict, host: str = "127.0.0.1",
     host that owns the keys. Returns a started-but-not-serving
     HTTPServer; call serve_forever() in a thread of your choosing.
     """
+    # This stdlib adapter is local-only, not an Internet-facing production server.
+    if type(host) is not str:
+        raise ValueError("loopback address required")
+    address = ipaddress.ip_address("127.0.0.1" if host == "localhost" else host)
+    if not address.is_loopback:
+        raise ValueError("adjudication server must bind a loopback address")
+    if type(threshold) is not int or threshold != 3:
+        raise ValueError("three-of-four adjudication threshold required")
+    if type(port) is not int or not 0 <= port <= 65535 or type(trusted_pubkeys) is not dict:
+        raise ValueError("invalid server configuration")
     handler = type("BoundAdjudicationHandler", (AdjudicationHTTPHandler,), {
-        "trusted_pubkeys": dict(trusted_pubkeys or {}),
-        "threshold": int(threshold),
+        "trusted_pubkeys": dict(trusted_pubkeys),
+        "threshold": threshold,
     })
-    return HTTPServer((host, port), handler)
+    server_class = HTTPServer
+    if address.version == 6:
+        server_class = type("LoopbackIPv6AdjudicationServer", (HTTPServer,),
+                            {"address_family": socket.AF_INET6})
+    return server_class((str(address), port), handler)
