@@ -251,17 +251,18 @@ def test_adjudicate_never_raises_to_caller():
         decision = adjudicate(bad, pubkeys, ts=TS)
         assert isinstance(decision.verdict, str)
         assert decision.verdict == ADJUDICATION_UNKNOWN
-    # uncanonicalizable extra field: digest stays empty, facts still adjudicate
+    # Uncanonicalizable evidence has no bound identity and must stay UNKNOWN.
     weird = copy.deepcopy(bundle)
     weird["extra"] = {"unserializable-set"}
     decision = adjudicate(weird, pubkeys, ts=TS)
     assert decision.bundle_digest == ""
-    assert decision.verdict == ADJUDICATION_VERIFIED
+    assert decision.verdict == ADJUDICATION_UNKNOWN
     # NaN never hashes: canonical_json refuses, digest stays empty
     nan_bundle = copy.deepcopy(bundle)
     nan_bundle["extra"] = float("nan")
     decision = adjudicate(nan_bundle, pubkeys, ts=TS)
     assert decision.bundle_digest == ""
+    assert decision.verdict == ADJUDICATION_UNKNOWN
 
 
 def test_handle_adjudicate_fail_closed_body():
